@@ -1,0 +1,6 @@
+@unifye_backend_HostAddress = http://localhost:5075
+
+GET {{unifye_backend_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###
