@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("unifye_backend")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+c6ded61b4b562b1fc8e6730a06bda3119cb39c74")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+0b5f8cbf8fd53637c498e8fc69e652ae7c993b60")]
 [assembly: System.Reflection.AssemblyProductAttribute("unifye_backend")]
 [assembly: System.Reflection.AssemblyTitleAttribute("unifye_backend")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
