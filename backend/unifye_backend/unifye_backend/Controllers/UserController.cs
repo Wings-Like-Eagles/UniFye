@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using unifye_backend.Interfaces;
 using unifye_backend.Models;
 
 namespace unifye_backend.Controllers
@@ -13,13 +14,15 @@ namespace unifye_backend.Controllers
         }
         public IActionResult Index()
         {
-            return View();
+            return Ok();
         }
 
         public User GetAllUsers()
         {
-            var user = new User(); 
+            var user = new User();
 
+
+            return user;
         }
     }
 }
