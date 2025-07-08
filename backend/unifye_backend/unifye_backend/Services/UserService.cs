@@ -1,21 +1,25 @@
 ﻿using System;
 using unifye_backend.Interfaces;
 using unifye_backend.Models;
+using unifye_backend.Validators;
 
 namespace unifye_backend.Services
 {
     public class UserService: IUserService
     {
         private readonly ApplicationDbContext _context;
+        private readonly IPasswordValidator _passwordValidator;
 
-        public UserService(ApplicationDbContext context)
+        public UserService(ApplicationDbContext context, IPasswordValidator passwordValidator)
         {
             _context = context;
+            this._passwordValidator = passwordValidator;
         }
 
-        public User GetUserById(int id)
+        public async Task<User> GetUserById(int id)
         {
-            return _context.Users.Find(id);
+            var user = await _context.Users.FindAsync(id) ?? throw new KeyNotFoundException($"User with ID {id} was not found.");
+            return user;
         }
 
         public IEnumerable<User> GetAllUsers()
@@ -25,6 +29,10 @@ namespace unifye_backend.Services
 
         public void CreateUser(User user)
         {
+            if (!_passwordValidator.Validate(user.Password, out var errors))
+            {
+                throw new ArgumentException(string.Join("; ", errors));
+            }
             _context.Users.Add(user);
             _context.SaveChanges();
         }

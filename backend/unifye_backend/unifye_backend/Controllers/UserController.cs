@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.OpenApi.Validations;
 using unifye_backend.Interfaces;
 using unifye_backend.Models;
 
@@ -25,16 +26,30 @@ namespace unifye_backend.Controllers
         }
 
         [HttpPost]
-        public IActionResult CreateUser(User newUser)
+        public IActionResult RegisterUser(User newUser)
         {
-            if(newUser == null)
+            if (newUser == null)
             {
                 return BadRequest();
             }
 
-            _userService.CreateUser(newUser);
+            try
+            {
+                _userService.CreateUser(newUser);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(ex.Message);
+            }
 
             return Ok();
+        }
+
+        [HttpGet("{id}")]
+        public async Task<IActionResult> GetUserById(int id)
+        {
+            User users = await _userService.GetUserById(id);
+            return Ok(users);
         }
     }
 }
