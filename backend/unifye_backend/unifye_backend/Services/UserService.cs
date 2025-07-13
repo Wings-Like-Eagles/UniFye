@@ -1,4 +1,7 @@
-﻿using System;
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System;
+using unifye_backend.DTO;
 using unifye_backend.Interfaces;
 using unifye_backend.Models;
 using unifye_backend.Validators;
@@ -12,7 +15,7 @@ namespace unifye_backend.Services
 
         public UserService(ApplicationDbContext context, IPasswordValidator passwordValidator)
         {
-            _context = context;
+            this._context = context;
             this._passwordValidator = passwordValidator;
         }
 
@@ -25,6 +28,23 @@ namespace unifye_backend.Services
         public IEnumerable<User> GetAllUsers()
         {
             return _context.Users.ToList();
+        }
+
+        public async Task<User> GetUserByEmail([FromBody] LoginDTO loginDTO)
+        {
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == loginDTO.Email);
+
+            if (user == null)
+            {
+                throw new KeyNotFoundException("User does not exist");
+            }
+
+            if (user.Password != loginDTO.Password)
+            {
+                throw new UnauthorizedAccessException("Incorrect password");
+            }
+
+            return user;
         }
 
         public void CreateUser(User user)

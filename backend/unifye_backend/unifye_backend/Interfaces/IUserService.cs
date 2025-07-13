@@ -1,4 +1,5 @@
-﻿using unifye_backend.Models;
+﻿using unifye_backend.DTO;
+using unifye_backend.Models;
 
 namespace unifye_backend.Interfaces
 {
@@ -6,6 +7,7 @@ namespace unifye_backend.Interfaces
     {
         Task<User> GetUserById(int id);
         IEnumerable<User> GetAllUsers();
+        Task<User> GetUserByEmail(LoginDTO loginDTO);
         void CreateUser(User user);
         void UpdateUser(User user);
         void DeleteUser(int id);
