@@ -21,7 +21,7 @@ namespace unifye_backend.Services
 
         public async Task<User> GetUserById(int id)
         {
-            var user = await _context.Users.FindAsync(id) ?? throw new KeyNotFoundException($"User with ID {id} was not found.");
+            User user = await _context.Users.FindAsync(id) ?? throw new KeyNotFoundException($"User with ID {id} was not found.");
             return user;
         }
 
@@ -32,7 +32,7 @@ namespace unifye_backend.Services
 
         public async Task<User> GetUserByEmail([FromBody] LoginDTO loginDTO)
         {
-            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == loginDTO.Email);
+            User user = await _context.Users.FirstOrDefaultAsync(u => u.Email == loginDTO.Email);
 
             if (user == null)
             {
@@ -59,7 +59,7 @@ namespace unifye_backend.Services
 
         public void UpdateUser(User user)
         {
-            var existing = _context.Users.Find(user.Id);
+            User existing = _context.Users.Find(user.Id);
             if (existing != null)
             {
                 existing.Name = user.Name;
@@ -71,7 +71,7 @@ namespace unifye_backend.Services
 
         public void DeleteUser(int id)
         {
-            var user = _context.Users.Find(id);
+            User user = _context.Users.Find(id);
             if (user != null)
             {
                 _context.Users.Remove(user);

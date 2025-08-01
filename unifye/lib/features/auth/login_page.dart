@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:unifye/features/auth/register_page.dart';
 import 'package:unifye/widgets/custom-button.dart';
 
 class LoginPage extends StatelessWidget {
   const LoginPage({super.key});
+  static const routeName = '/login';
 
   @override
   Widget build(BuildContext context) {
@@ -15,7 +17,11 @@ class LoginPage extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Text("Login", style: TextStyle(fontSize: 32, fontFamily: 'Poppins', color: Color(0xFFFF5C8D))),
+                const Text("Login",
+                    style: TextStyle(
+                        fontSize: 32,
+                        fontFamily: 'Poppins',
+                        color: Color(0xFFFF5C8D))),
                 const SizedBox(height: 60),
                 TextField(
                   decoration: InputDecoration(labelText: 'Email'),
@@ -25,14 +31,14 @@ class LoginPage extends StatelessWidget {
                   obscureText: true,
                   decoration: InputDecoration(labelText: 'Password'),
                 ),
-                     const SizedBox(height: 20),
+                const SizedBox(height: 20),
                 Align(
                   alignment: Alignment.centerRight,
                   child: Text(
                     "FORGOT PASSWORD?",
                     style: TextStyle(
                       color: Color(0xFF6A0572),
-                         fontFamily: 'Poppins',
+                      fontFamily: 'Poppins',
                     ),
                   ),
                 ),
@@ -45,11 +51,16 @@ class LoginPage extends StatelessWidget {
                   },
                 ),
                 const SizedBox(height: 40),
-                Text(
-                  "HAVE AN ACCOUNT?",
-                  style: TextStyle(
-                    color: Color(0xFF6A0572),
-                    fontFamily: 'Poppins',
+                InkWell(
+                  onTap: () {
+                    Navigator.pushNamed(context, RegisterPage.routeName);
+                  },
+                  child: const Text(
+                    "ALREADY HAVE AN ACCOUNT? LOGIN",
+                    style: TextStyle(
+                      color: Color(0xFF6A0572),
+                      fontFamily: 'Poppins',
+                    ),
                   ),
                 ),
               ],

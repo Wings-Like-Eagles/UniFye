@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:unifye/features/auth/login_page.dart';
+import 'package:unifye/features/auth/register_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -32,7 +33,11 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const LoginPage(),
+      initialRoute: '/login',
+      routes: {
+        LoginPage.routeName: (context) => const LoginPage(),
+        RegisterPage.routeName: (context) => const RegisterPage(),
+      },
     );
   }
 }
