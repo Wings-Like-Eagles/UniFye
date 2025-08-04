@@ -15,13 +15,21 @@ class _RegisterPageState extends State<RegisterPage> {
   final List<String> interests = [
     'Golf',
     'Cricket',
-    'Football',
-    'Basketball',
-    'Swimming',
-    'Tennis',
-    'Running',
+    'Rugby',
+    'Dancing',
+    'Gardening',
+    'Computers',
+    'Painting',
+    'Art',
+    'Cooking',
+    'Reading',
+    'Gaming'
   ];
   List<String> selectedInterests = []; // To track selections
+  static const String name = "Name";
+  static const String email = "Email";
+  static const String password = "Password";
+  static const String confirmPassword = "Re-enter Password";
 
   void nextStep() {
     setState(() {
@@ -94,7 +102,7 @@ class _RegisterPageState extends State<RegisterPage> {
 
                 // ✅ Dynamic Step Content
                 if (currentStep == 0) ...[
-                  TextField(decoration: InputDecoration(labelText: 'Name')),
+                  TextField(decoration: InputDecoration(labelText: name)),
                   const SizedBox(height: 20),
                   TextField(decoration: InputDecoration(labelText: 'Email')),
                 ] else if (currentStep == 1) ...[
@@ -117,73 +125,82 @@ class _RegisterPageState extends State<RegisterPage> {
                     ),
                   ),
                   const SizedBox(height: 20),
-
                   Wrap(
-  spacing: 12,
-  runSpacing: 12,
-  children: interests.map((interest) {
-    final isSelected = selectedInterests.contains(interest);
+                    spacing: 12,
+                    runSpacing: 12,
+                    children: interests.map((interest) {
+                      final isSelected = selectedInterests.contains(interest);
 
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          if (isSelected) {
-            selectedInterests.remove(interest);
-          } else {
-            selectedInterests.add(interest);
-          }
-        });
-      },
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 300),
-        padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
-        decoration: BoxDecoration(
-          color: isSelected ? const Color(0xFFFF5C8D) : Colors.white,
-          borderRadius: BorderRadius.circular(28),
-          border: Border.all(
-            color: isSelected ? const Color(0xFFFF5C8D) : Colors.grey.shade400,
-            width: 1.5,
-          ),
-          boxShadow: isSelected
-              ? [
-                  BoxShadow(
-                    color: const Color(0xFFFF5C8D).withOpacity(0.4),
-                    blurRadius: 10,
-                    offset: const Offset(0, 4),
+                      return GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            if (isSelected) {
+                              selectedInterests.remove(interest);
+                            } else {
+                              selectedInterests.add(interest);
+                            }
+                          });
+                        },
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 300),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 22, vertical: 14),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? const Color(0xFFFF5C8D)
+                                : Colors.white,
+                            borderRadius: BorderRadius.circular(28),
+                            border: Border.all(
+                              color: isSelected
+                                  ? const Color(0xFFFF5C8D)
+                                  : Colors.grey.shade400,
+                              width: 1.5,
+                            ),
+                            boxShadow: isSelected
+                                ? [
+                                    BoxShadow(
+                                      color: const Color(0xFFFF5C8D)
+                                          .withOpacity(0.4),
+                                      blurRadius: 10,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ]
+                                : [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.06),
+                                      blurRadius: 5,
+                                      offset: const Offset(0, 3),
+                                    ),
+                                  ],
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(
+                                isSelected
+                                    ? Icons.check_circle
+                                    : Icons.circle_outlined,
+                                color: isSelected ? Colors.white : Colors.grey,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                interest,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontFamily: 'Poppins',
+                                  fontWeight: FontWeight.w600,
+                                  color: isSelected
+                                      ? Colors.white
+                                      : const Color(0xFF6A0572),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    }).toList(),
                   ),
-                ]
-              : [
-                  BoxShadow(
-                    color: Colors.black.withOpacity(0.06),
-                    blurRadius: 5,
-                    offset: const Offset(0, 3),
-                  ),
-                ],
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              isSelected ? Icons.check_circle : Icons.circle_outlined,
-              color: isSelected ? Colors.white : Colors.grey,
-              size: 20,
-            ),
-            const SizedBox(width: 8),
-            Text(
-              interest,
-              style: TextStyle(
-                fontSize: 16,
-                fontFamily: 'Poppins',
-                fontWeight: FontWeight.w600,
-                color: isSelected ? Colors.white : const Color(0xFF6A0572),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }).toList(),
-),
                 ],
 
                 const SizedBox(height: 40),
