@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.8.34511.84
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "unifye_backend", "unifye_backend\unifye_backend.csproj", "{8EEE1A8C-2E7C-433D-899A-4854B9067AD7}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{8EEE1A8C-2E7C-433D-899A-4854B9067AD7}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8EEE1A8C-2E7C-433D-899A-4854B9067AD7}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8EEE1A8C-2E7C-433D-899A-4854B9067AD7}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8EEE1A8C-2E7C-433D-899A-4854B9067AD7}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {0E2D7C81-5274-4208-9F9A-C13AEC6C936D}
+	EndGlobalSection
+EndGlobal

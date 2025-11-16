@@ -1,0 +1,82 @@
+﻿using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+using System;
+using unifye_backend.DTO;
+using unifye_backend.Interfaces;
+using unifye_backend.Models;
+using unifye_backend.Validators;
+
+namespace unifye_backend.Services
+{
+    public class UserService: IUserService
+    {
+        private readonly ApplicationDbContext _context;
+        private readonly IPasswordValidator _passwordValidator;
+
+        public UserService(ApplicationDbContext context, IPasswordValidator passwordValidator)
+        {
+            this._context = context;
+            this._passwordValidator = passwordValidator;
+        }
+
+        public async Task<User> GetUserById(int id)
+        {
+            User user = await _context.Users.FindAsync(id) ?? throw new KeyNotFoundException($"User with ID {id} was not found.");
+            return user;
+        }
+
+        public IEnumerable<User> GetAllUsers()
+        {
+            return _context.Users.ToList();
+        }
+
+        public async Task<User> GetUserByEmail([FromBody] LoginDTO loginDTO)
+        {
+            User user = await _context.Users.FirstOrDefaultAsync(u => u.Email == loginDTO.Email);
+
+            if (user == null)
+            {
+                throw new KeyNotFoundException("User does not exist");
+            }
+
+            if (user.Password != loginDTO.Password)
+            {
+                throw new UnauthorizedAccessException("Incorrect password");
+            }
+
+            return user;
+        }
+
+        public void CreateUser(User user)
+        {
+            if (!_passwordValidator.Validate(user.Password, out var errors))
+            {
+                throw new ArgumentException(string.Join("; ", errors));
+            }
+            _context.Users.Add(user);
+            _context.SaveChanges();
+        }
+
+        public void UpdateUser(User user)
+        {
+            User existing = _context.Users.Find(user.Id);
+            if (existing != null)
+            {
+                existing.Name = user.Name;
+                existing.Email = user.Email;
+                // Update more properties
+                _context.SaveChanges();
+            }
+        }
+
+        public void DeleteUser(int id)
+        {
+            User user = _context.Users.Find(id);
+            if (user != null)
+            {
+                _context.Users.Remove(user);
+                _context.SaveChanges();
+            }
+        }
+    }
+}
