@@ -49,7 +49,7 @@ class _LoginPageState extends State<LoginPage> {
                   // Email Field
                   AppTextField(
                     label: 'Email Address',
-                    hint: 'yourname@example.com',
+                    hint: 'Enter your email',
                     controller: _emailController,
                     inputType: AppInputType.email,
                     prefixIcon: Icons.email_outlined,
@@ -89,7 +89,7 @@ class _LoginPageState extends State<LoginPage> {
                     child: AppButton(
                       text: 'Forgot Password?',
                       type: AppButtonType.text,
-                      size: AppButtonSize.small,
+                      size: AppButtonSize.medium,
                       onPressed: _handleForgotPassword,
                     ),
                   ),

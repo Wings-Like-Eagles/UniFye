@@ -685,5 +685,3 @@ class _RegisterPageState extends State<RegisterPage> {
     Navigator.pop(context);
   }
 }
-
-
