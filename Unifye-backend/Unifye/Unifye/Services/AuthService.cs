@@ -19,6 +19,28 @@ public class AuthService(
         "image/webp"
     };
 
+    public async Task<AuthServiceResult<UserResponse>> LoginAsync(LoginRequest request, CancellationToken cancellationToken)
+    {
+        var normalizedEmail = request.Email.Trim().ToLowerInvariant();
+        var user = await dbContext.Users
+            .Include(currentUser => currentUser.Profile)
+            .ThenInclude(profile => profile.Interests)
+            .FirstOrDefaultAsync(currentUser => currentUser.Email == normalizedEmail, cancellationToken);
+
+        if (user is null)
+        {
+            return AuthServiceResult<UserResponse>.Fail(StatusCodes.Status401Unauthorized, "Invalid email or password.");
+        }
+
+        var isValidPassword = BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash);
+        if (!isValidPassword)
+        {
+            return AuthServiceResult<UserResponse>.Fail(StatusCodes.Status401Unauthorized, "Invalid email or password.");
+        }
+
+        return AuthServiceResult<UserResponse>.Ok(ToResponse(user));
+    }
+
     public async Task<AuthServiceResult<UserResponse>> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken)
     {
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();

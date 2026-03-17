@@ -9,6 +9,36 @@ namespace Unifye.Controllers;
 public class AuthController(
     IAuthService authService) : ControllerBase
 {
+    [HttpPost("login")]
+    public async Task<ActionResult<object>> Login([FromBody] LoginRequest request, CancellationToken cancellationToken)
+    {
+        var result = await authService.LoginAsync(request, cancellationToken);
+        if (!result.Success)
+        {
+            return StatusCode(result.StatusCode, new { message = result.ErrorMessage });
+        }
+
+        var user = result.Data!;
+        return Ok(new
+        {
+            success = true,
+            data = new
+            {
+                token = string.Empty,
+                user = new
+                {
+                    id = user.Id,
+                    email = user.Email,
+                    firstName = user.FirstName,
+                    lastName = user.LastName,
+                    name = $"{user.FirstName} {user.LastName}".Trim(),
+                    imageUrl = user.ImageUrl,
+                    photoUrl = user.ImageUrl
+                }
+            }
+        });
+    }
+
     [HttpPost("register")]
     [Consumes("multipart/form-data")]
     public async Task<ActionResult<UserResponse>> Register([FromForm] RegisterRequest request, CancellationToken cancellationToken)
