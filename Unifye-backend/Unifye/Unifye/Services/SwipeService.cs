@@ -25,17 +25,18 @@ public class SwipeService(ApplicationDbContext dbContext) : ISwipeService
             .Select(swipe => swipe.TargetUserId)
             .ToListAsync(cancellationToken);
 
-        var candidates = await dbContext.Users
+        var candidates = await dbContext.UserProfiles
             .AsNoTracking()
-            .Include(user => user.Interests)
-            .Where(user => user.Id != userId && !excludedUserIds.Contains(user.Id))
-            .OrderByDescending(user => user.CreatedAtUtc)
+            .Include(profile => profile.Interests)
+            .Include(profile => profile.User)
+            .Where(profile => profile.UserId != userId && !excludedUserIds.Contains(profile.UserId))
+            .OrderByDescending(profile => profile.User.CreatedAtUtc)
             .Take(take)
             .ToListAsync(cancellationToken);
 
         var response = candidates
             .Select(candidate => new SwipeCandidateResponse(
-                candidate.Id,
+                candidate.UserId,
                 candidate.FirstName,
                 candidate.LastName,
                 candidate.Gender,
@@ -141,24 +142,25 @@ public class SwipeService(ApplicationDbContext dbContext) : ISwipeService
             .Select(match => match.UserOneId == userId ? match.UserTwoId : match.UserOneId)
             .ToListAsync(cancellationToken);
 
-        var users = await dbContext.Users
+        var profiles = await dbContext.UserProfiles
             .AsNoTracking()
-            .Include(user => user.Interests)
-            .Where(user => matchUserIds.Contains(user.Id))
-            .OrderByDescending(user => user.CreatedAtUtc)
+            .Include(profile => profile.User)
+            .Include(profile => profile.Interests)
+            .Where(profile => matchUserIds.Contains(profile.UserId))
+            .OrderByDescending(profile => profile.User.CreatedAtUtc)
             .ToListAsync(cancellationToken);
 
-        var response = users
-            .Select(user => new UserResponse(
-                user.Id,
-                user.FirstName,
-                user.LastName,
-                user.Email,
-                user.Gender,
-                user.DateOfBirth,
-                user.Interests.Select(interest => interest.Interest),
-                user.ImageUrl,
-                user.CreatedAtUtc))
+        var response = profiles
+            .Select(profile => new UserResponse(
+                profile.UserId,
+                profile.FirstName,
+                profile.LastName,
+                profile.User.Email,
+                profile.Gender,
+                profile.DateOfBirth,
+                profile.Interests.Select(interest => interest.Interest),
+                profile.ImageUrl,
+                profile.User.CreatedAtUtc))
             .ToArray();
 
         return AuthServiceResult<IReadOnlyCollection<UserResponse>>.Ok(response);

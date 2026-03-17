@@ -6,9 +6,9 @@ public class UserInterest
 {
     public int Id { get; set; }
 
-    public Guid UserId { get; set; }
+    public Guid UserProfileId { get; set; }
 
-    public User User { get; set; } = null!;
+    public UserProfile UserProfile { get; set; } = null!;
 
     [MaxLength(100)]
     public required string Interest { get; set; }

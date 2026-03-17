@@ -61,19 +61,22 @@ public class AuthService(
 
         var user = new User
         {
-            FirstName = request.FirstName.Trim(),
-            LastName = request.LastName.Trim(),
             Email = normalizedEmail,
             PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
-            Gender = request.Gender.Trim(),
-            DateOfBirth = dateOfBirth,
-            ImageUrl = imageUrl
+            Profile = new UserProfile
+            {
+                FirstName = request.FirstName.Trim(),
+                LastName = request.LastName.Trim(),
+                Gender = request.Gender.Trim(),
+                DateOfBirth = dateOfBirth,
+                ImageUrl = imageUrl
+            }
         };
 
         var interests = ParseInterests(request.Interests);
         foreach (var interest in interests)
         {
-            user.Interests.Add(new UserInterest { Interest = interest });
+            user.Profile.Interests.Add(new UserInterest { Interest = interest });
         }
 
         dbContext.Users.Add(user);
@@ -85,7 +88,8 @@ public class AuthService(
     public async Task<AuthServiceResult<UserResponse>> GetByIdAsync(Guid id, CancellationToken cancellationToken)
     {
         var user = await dbContext.Users
-            .Include(currentUser => currentUser.Interests)
+            .Include(currentUser => currentUser.Profile)
+            .ThenInclude(profile => profile.Interests)
             .FirstOrDefaultAsync(currentUser => currentUser.Id == id, cancellationToken);
 
         if (user is null)
@@ -139,15 +143,16 @@ public class AuthService(
 
     private static UserResponse ToResponse(User user)
     {
+        var profile = user.Profile;
         return new UserResponse(
             user.Id,
-            user.FirstName,
-            user.LastName,
+            profile.FirstName,
+            profile.LastName,
             user.Email,
-            user.Gender,
-            user.DateOfBirth,
-            user.Interests.Select(interest => interest.Interest),
-            user.ImageUrl,
+            profile.Gender,
+            profile.DateOfBirth,
+            profile.Interests.Select(interest => interest.Interest),
+            profile.ImageUrl,
             user.CreatedAtUtc);
     }
 }

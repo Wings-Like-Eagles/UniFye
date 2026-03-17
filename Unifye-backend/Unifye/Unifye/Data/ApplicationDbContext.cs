@@ -7,6 +7,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
 {
     public DbSet<User> Users => Set<User>();
 
+    public DbSet<UserProfile> UserProfiles => Set<UserProfile>();
+
     public DbSet<UserInterest> UserInterests => Set<UserInterest>();
 
     public DbSet<UserSwipe> UserSwipes => Set<UserSwipe>();
@@ -16,8 +18,10 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
+        modelBuilder.HasDefaultSchema("development");
 
         modelBuilder.Entity<User>()
+            .ToTable("users")
             .HasIndex(user => user.Email)
             .IsUnique();
 
@@ -26,16 +30,32 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .HasConversion(email => email.ToLowerInvariant(), email => email);
 
         modelBuilder.Entity<User>()
-            .HasMany(user => user.Interests)
-            .WithOne(interest => interest.User)
-            .HasForeignKey(interest => interest.UserId)
+            .HasOne(user => user.Profile)
+            .WithOne(profile => profile.User)
+            .HasForeignKey<UserProfile>(profile => profile.UserId)
             .OnDelete(DeleteBehavior.Cascade);
 
+        modelBuilder.Entity<UserProfile>()
+            .ToTable("user_profiles")
+            .HasMany(profile => profile.Interests)
+            .WithOne(interest => interest.UserProfile)
+            .HasForeignKey(interest => interest.UserProfileId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<UserInterest>()
+            .ToTable("user_interests");
+
+        modelBuilder.Entity<User>()
+            .Navigation(user => user.Profile)
+            .AutoInclude();
+
         modelBuilder.Entity<UserSwipe>()
+            .ToTable("user_swipes")
             .HasIndex(swipe => new { swipe.SourceUserId, swipe.TargetUserId })
             .IsUnique();
 
         modelBuilder.Entity<UserMatch>()
+            .ToTable("user_matches")
             .HasIndex(match => new { match.UserOneId, match.UserTwoId })
             .IsUnique();
     }
