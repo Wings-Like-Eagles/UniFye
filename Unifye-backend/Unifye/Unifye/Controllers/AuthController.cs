@@ -19,21 +19,21 @@ public class AuthController(
         }
 
         var user = result.Data!;
-        return Ok(new
+        return Ok(new LoginResponseDto
         {
-            success = true,
-            data = new
+            Success = true,
+            Data = new LoginResponseDataDto
             {
-                token = string.Empty,
-                user = new
+                Token = string.Empty,
+                User = new LoginUserDto
                 {
-                    id = user.Id,
-                    email = user.Email,
-                    firstName = user.FirstName,
-                    lastName = user.LastName,
-                    name = $"{user.FirstName} {user.LastName}".Trim(),
-                    imageUrl = user.ImageUrl,
-                    photoUrl = user.ImageUrl
+                    Id = user.Id,
+                    Email = user.Email,
+                    FirstName = user.FirstName,
+                    LastName = user.LastName,
+                    Name = $"{user.FirstName} {user.LastName}".Trim(),
+                    ImageUrl = user.ImageUrl,
+                    PhotoUrl = user.ImageUrl
                 }
             }
         });
