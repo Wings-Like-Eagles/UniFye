@@ -1,8 +1,8 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IMatch extends Document {
-  user1: mongoose.Types.ObjectId;
-  user2: mongoose.Types.ObjectId;
+  sender: mongoose.Types.ObjectId;
+  receiver: mongoose.Types.ObjectId;
   status: 'active' | 'unmatched';
   matchedAt: Date;
   lastMessageAt?: Date;
@@ -12,12 +12,12 @@ export interface IMatch extends Document {
 
 const matchSchema = new Schema<IMatch>(
   {
-    user1: {
+    sender: {
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
     },
-    user2: {
+    receiver: {
       type: Schema.Types.ObjectId,
       ref: 'User',
       required: true,
@@ -41,10 +41,10 @@ const matchSchema = new Schema<IMatch>(
 );
 
 // Ensure unique matches between two users
-matchSchema.index({ user1: 1, user2: 1 }, { unique: true });
+matchSchema.index({ sender: 1, receiver: 1 }, { unique: true });
 
 // Index for querying user matches
-matchSchema.index({ user1: 1, status: 1 });
-matchSchema.index({ user2: 1, status: 1 });
+matchSchema.index({ sender: 1, status: 1 });
+matchSchema.index({ receiver: 1, status: 1 });
 
 export default mongoose.model<IMatch>('Match', matchSchema);

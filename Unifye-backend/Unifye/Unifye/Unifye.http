@@ -1,0 +1,6 @@
+@Unifye_HostAddress = http://localhost:5219
+
+GET {{Unifye_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

@@ -56,8 +56,8 @@ export const swipe = async (req: AuthRequest, res: Response, next: NextFunction)
       if (reciprocalSwipe) {
         // Create match
         const match = await Match.create({
-          user1: swiperId,
-          user2: swipedUserId,
+          sender: swiperId,
+          receiver: swipedUserId,
         });
 
         return res.status(201).json({
@@ -153,11 +153,11 @@ export const getMatches = async (req: AuthRequest, res: Response, next: NextFunc
     }
 
     const matches = await Match.find({
-      $or: [{ user1: userId }, { user2: userId }],
+      $or: [{ sender: userId }, { receiver: userId }],
       status: 'active',
     })
-      .populate('user1', 'name')
-      .populate('user2', 'name')
+      .populate('sender', 'name')
+      .populate('receiver', 'name')
       .sort('-matchedAt');
 
     res.status(200).json({
@@ -185,7 +185,7 @@ export const unmatch = async (req: AuthRequest, res: Response, next: NextFunctio
 
     const match = await Match.findOne({
       _id: matchId,
-      $or: [{ user1: userId }, { user2: userId }],
+      $or: [{ sender: userId }, { receiver: userId }],
     });
 
     if (!match) {

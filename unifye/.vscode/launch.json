@@ -1,0 +1,21 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Unfye: Development",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main_dev.dart",
+      "args": ["--flavor", "development"],
+      "toolArgs": ["--dart-define=ENV=development"]
+    },
+    {
+      "name": "Unifye: Production",
+      "request": "launch",
+      "type": "dart",
+      "program": "lib/main_prod.dart",
+      "args": ["--flavor", "production"],
+      "toolArgs": ["--dart-define=ENV=production"]
+    }
+  ]
+}

@@ -7,8 +7,8 @@ export interface IUser {
   password: string;
   name: string;
   dateOfBirth: Date;
-  gender: 'male' | 'female' | 'other';
-  interestedIn: ('male' | 'female' | 'other')[];
+  gender: 'male' | 'female';
+  interestedIn: ('male' | 'female')[];
   verified: boolean;
   active: boolean;
   createdAt: Date;
