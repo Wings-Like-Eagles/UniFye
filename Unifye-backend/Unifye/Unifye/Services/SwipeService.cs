@@ -26,7 +26,7 @@ public class SwipeService(ApplicationDbContext dbContext) : ISwipeService
             .ToListAsync(cancellationToken);
 
         var candidates = await dbContext.UserProfiles
-            .AsNoTracking()
+            .AsNoTrackingWithIdentityResolution()
             .Include(profile => profile.Interests)
             .Include(profile => profile.User)
             .Where(profile => profile.UserId != userId && !excludedUserIds.Contains(profile.UserId))
