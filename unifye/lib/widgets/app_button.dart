@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:my_app/core/theme/app_colour.dart';
+import 'package:unifye/core/theme/app_colour.dart';
 
 enum AppButtonType {
   primary,
@@ -72,10 +72,10 @@ class AppButton extends StatelessWidget {
         borderRadius: BorderRadius.circular(_getBorderRadius()),
         boxShadow: onPressed != null
             ? [
-                BoxShadow(
+                const BoxShadow(
                   color: AppColors.shadowLight,
                   blurRadius: 12,
-                  offset: const Offset(0, 4),
+                  offset: Offset(0, 4),
                 ),
               ]
             : null,

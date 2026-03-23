@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'dart:io';
-import 'package:my_app/core/theme/app_colour.dart';
-import 'package:my_app/widgets/app_button.dart';
-import 'package:my_app/widgets/app_text_field.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:unifye/core/theme/app_colour.dart';
+import 'package:unifye/widgets/app_button.dart';
+import 'package:unifye/widgets/app_text_field.dart';
+import 'package:unifye/features/auth/providers/registration_provider.dart';
+import 'package:unifye/features/auth/providers/auth_provider.dart';
+import 'package:unifye/features/auth/models/auth_state.dart';
 
-class RegisterPage extends StatefulWidget {
+class RegisterPage extends ConsumerStatefulWidget {
   const RegisterPage({Key? key}) : super(key: key);
 
   @override
-  State<RegisterPage> createState() => _RegisterPageState();
+  ConsumerState<RegisterPage> createState() => _RegisterPageState();
 }
 
-class _RegisterPageState extends State<RegisterPage> {
+class _RegisterPageState extends ConsumerState<RegisterPage> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   final PageController _pageController = PageController();
   int _currentPage = 0;
@@ -25,24 +29,12 @@ class _RegisterPageState extends State<RegisterPage> {
   final TextEditingController _bioController = TextEditingController();
   final TextEditingController _interestInputController = TextEditingController();
 
-  DateTime? _dateOfBirth;
-  String? _gender; // 'Male' | 'Female'
-  final Set<String> _selectedInterests = {};
   final List<String> _interestCatalog = const [
     'Music','Golf','Travel','Movies','Cooking','Fitness','Reading','Gaming',
     'Art','Tech','Outdoors','Dancing','Photography','Pets','Foodie','Yoga',
     'Hiking','Running','Fashion','Theatre'
   ];
-  bool _isLoading = false;
   File? _profileImageFile;
-
-  String? _nameError;
-  String? _emailError;
-  String? _passwordError;
-  String? _universityError;
-  String? _dobError;
-  String? _genderError;
-  String? _bioError;
 
   @override
   void dispose() {
@@ -57,8 +49,76 @@ class _RegisterPageState extends State<RegisterPage> {
     super.dispose();
   }
 
+  String? _lastShownError;
+
   @override
   Widget build(BuildContext context) {
+    final registrationState = ref.watch(registrationProvider);
+
+    // Sync controllers with state (only if different to avoid cursor jumping)
+    if (_nameController.text != registrationState.name) {
+      _nameController.text = registrationState.name;
+      _nameController.selection = TextSelection.fromPosition(
+        TextPosition(offset: _nameController.text.length),
+      );
+    }
+    if (_emailController.text != registrationState.email) {
+      _emailController.text = registrationState.email;
+      _emailController.selection = TextSelection.fromPosition(
+        TextPosition(offset: _emailController.text.length),
+      );
+    }
+    if (_passwordController.text != registrationState.password) {
+      _passwordController.text = registrationState.password;
+      _passwordController.selection = TextSelection.fromPosition(
+        TextPosition(offset: _passwordController.text.length),
+      );
+    }
+    if (_universityController.text != registrationState.university) {
+      _universityController.text = registrationState.university;
+      _universityController.selection = TextSelection.fromPosition(
+        TextPosition(offset: _universityController.text.length),
+      );
+    }
+    if (_bioController.text != registrationState.bio) {
+      _bioController.text = registrationState.bio;
+      _bioController.selection = TextSelection.fromPosition(
+        TextPosition(offset: _bioController.text.length),
+      );
+    }
+    if (registrationState.dateOfBirth != null && _dobController.text.isEmpty) {
+      _dobController.text = _formatDate(registrationState.dateOfBirth!);
+    }
+
+    // Listen to auth state changes
+    ref.listen<AuthState>(authProvider, (previous, next) {
+      next.when(
+        unauthenticated: () {},
+        authenticated: (user, token) {
+          // Navigate back to login or home screen on successful registration
+          if (mounted) {
+            _showSuccessMessage('Account created successfully!');
+            Navigator.pop(context);
+          }
+        },
+        loading: () {},
+      );
+    });
+
+    // Show error messages (only once per error)
+    if (registrationState.generalError != null && 
+        registrationState.generalError != _lastShownError && 
+        mounted) {
+      _lastShownError = registrationState.generalError;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && registrationState.generalError == _lastShownError) {
+          _showErrorMessage(registrationState.generalError!);
+        }
+      });
+    } else if (registrationState.generalError == null) {
+      _lastShownError = null;
+    }
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -172,6 +232,9 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   Widget _buildStepOneBasic() {
+    final registrationState = ref.watch(registrationProvider);
+    final registrationNotifier = ref.read(registrationProvider.notifier);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -188,9 +251,9 @@ class _RegisterPageState extends State<RegisterPage> {
           label: 'Full Name',
           hint: 'Your name',
           controller: _nameController,
-          errorText: _nameError,
+          errorText: registrationState.nameError,
           textInputAction: TextInputAction.next,
-          onChanged: (_) => setState(() => _nameError = null),
+          onChanged: (value) => registrationNotifier.updateName(value),
         ),
         const SizedBox(height: 16),
         AppTextField(
@@ -198,9 +261,9 @@ class _RegisterPageState extends State<RegisterPage> {
           hint: 'yourname@university.edu',
           controller: _emailController,
           inputType: AppInputType.email,
-          errorText: _emailError,
+          errorText: registrationState.emailError,
           textInputAction: TextInputAction.next,
-          onChanged: (_) => setState(() => _emailError = null),
+          onChanged: (value) => registrationNotifier.updateEmail(value),
         ),
         const SizedBox(height: 16),
         AppTextField(
@@ -208,15 +271,18 @@ class _RegisterPageState extends State<RegisterPage> {
           hint: 'Create a strong password',
           controller: _passwordController,
           inputType: AppInputType.password,
-          errorText: _passwordError,
+          errorText: registrationState.passwordError,
           textInputAction: TextInputAction.done,
-          onChanged: (_) => setState(() => _passwordError = null),
+          onChanged: (value) => registrationNotifier.updatePassword(value),
         ),
       ],
     );
   }
 
   Widget _buildStepTwoDetails() {
+    final registrationState = ref.watch(registrationProvider);
+    final registrationNotifier = ref.read(registrationProvider.notifier);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -233,9 +299,9 @@ class _RegisterPageState extends State<RegisterPage> {
           label: 'University',
           hint: 'e.g. University of Oxford',
           controller: _universityController,
-          errorText: _universityError,
+          errorText: registrationState.universityError,
           textInputAction: TextInputAction.next,
-          onChanged: (_) => setState(() => _universityError = null),
+          onChanged: (value) => registrationNotifier.updateUniversity(value),
         ),
         const SizedBox(height: 16),
         AppTextField(
@@ -243,7 +309,7 @@ class _RegisterPageState extends State<RegisterPage> {
           hint: 'Select your date of birth',
           controller: _dobController,
           readOnly: true,
-          errorText: _dobError,
+          errorText: registrationState.dobError,
           suffixIcon: Icons.calendar_today,
           onSuffixIconTap: _pickDateOfBirth,
           onTap: _pickDateOfBirth,
@@ -251,10 +317,10 @@ class _RegisterPageState extends State<RegisterPage> {
         ),
         const SizedBox(height: 16),
         _buildGenderSelector(),
-        if (_genderError != null) ...[
+        if (registrationState.genderError != null) ...[
           const SizedBox(height: 6),
           Text(
-            _genderError!,
+            registrationState.genderError!,
             style: const TextStyle(fontSize: 12, color: AppColors.error),
           ),
         ],
@@ -263,6 +329,9 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   Widget _buildStepThreeProfile() {
+    final registrationState = ref.watch(registrationProvider);
+    final registrationNotifier = ref.read(registrationProvider.notifier);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -281,8 +350,8 @@ class _RegisterPageState extends State<RegisterPage> {
           controller: _bioController,
           inputType: AppInputType.multiline,
           maxLines: 5,
-          errorText: _bioError,
-          onChanged: (_) => setState(() => _bioError = null),
+          errorText: registrationState.bioError,
+          onChanged: (value) => registrationNotifier.updateBio(value),
         ),
         const SizedBox(height: 16),
         _buildInterestCatalog(),
@@ -292,7 +361,7 @@ class _RegisterPageState extends State<RegisterPage> {
         AppButton(
           text: 'Create Account',
           onPressed: _submit,
-          isLoading: _isLoading,
+          isLoading: registrationState.isLoading,
           isFullWidth: true,
           size: AppButtonSize.large,
         ),
@@ -301,6 +370,9 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   Widget _buildNavBar() {
+    final registrationState = ref.watch(registrationProvider);
+    final isFinalStep = _currentPage == 2;
+
     return Row(
       children: [
         Expanded(
@@ -313,8 +385,11 @@ class _RegisterPageState extends State<RegisterPage> {
         const SizedBox(width: 12),
         Expanded(
           child: AppButton(
-            text: _currentPage == 2 ? 'Review' : 'Next',
-            onPressed: _nextPage,
+            text: isFinalStep ? 'Create Account' : 'Next',
+            onPressed: registrationState.isLoading
+                ? null
+                : (isFinalStep ? _submit : _nextPage),
+            isLoading: isFinalStep && registrationState.isLoading,
             type: AppButtonType.primary,
           ),
         ),
@@ -345,8 +420,10 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   Widget _buildGenderSelector() {
-    final isMale = _gender == 'Male';
-    final isFemale = _gender == 'Female';
+    final registrationState = ref.watch(registrationProvider);
+    final registrationNotifier = ref.read(registrationProvider.notifier);
+    final isMale = registrationState.gender == 'Male';
+    final isFemale = registrationState.gender == 'Female';
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -366,10 +443,7 @@ class _RegisterPageState extends State<RegisterPage> {
               child: AppButton(
                 text: 'Male',
                 type: isMale ? AppButtonType.primary : AppButtonType.outline,
-                onPressed: () => setState(() {
-                  _gender = 'Male';
-                  _genderError = null;
-                }),
+                onPressed: () => registrationNotifier.updateGender('Male'),
               ),
             ),
             const SizedBox(width: 12),
@@ -377,10 +451,7 @@ class _RegisterPageState extends State<RegisterPage> {
               child: AppButton(
                 text: 'Female',
                 type: isFemale ? AppButtonType.primary : AppButtonType.outline,
-                onPressed: () => setState(() {
-                  _gender = 'Female';
-                  _genderError = null;
-                }),
+                onPressed: () => registrationNotifier.updateGender('Female'),
               ),
             ),
           ],
@@ -390,6 +461,9 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   Widget _buildInterestCatalog() {
+    final registrationState = ref.watch(registrationProvider);
+    final registrationNotifier = ref.read(registrationProvider.notifier);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -406,17 +480,9 @@ class _RegisterPageState extends State<RegisterPage> {
           spacing: 10,
           runSpacing: 10,
           children: _interestCatalog.map((interest) {
-            final selected = _selectedInterests.contains(interest);
+            final selected = registrationState.interests.contains(interest);
             return GestureDetector(
-              onTap: () {
-                setState(() {
-                  if (selected) {
-                    _selectedInterests.remove(interest);
-                  } else {
-                    _selectedInterests.add(interest);
-                  }
-                });
-              },
+              onTap: () => registrationNotifier.toggleInterest(interest),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 150),
                 padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -530,6 +596,9 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   Future<void> _pickDateOfBirth() async {
+    final registrationState = ref.read(registrationProvider);
+    final registrationNotifier = ref.read(registrationProvider.notifier);
+    
     FocusScope.of(context).unfocus();
     final now = DateTime.now();
     final initial = DateTime(now.year - 20, now.month, now.day);
@@ -537,17 +606,14 @@ class _RegisterPageState extends State<RegisterPage> {
     final last = DateTime(now.year - 18, now.month, now.day);
     final picked = await showDatePicker(
       context: context,
-      initialDate: _dateOfBirth ?? initial,
+      initialDate: registrationState.dateOfBirth ?? initial,
       firstDate: first,
       lastDate: last,
       helpText: 'Select your date of birth',
     );
     if (picked != null) {
-      setState(() {
-        _dateOfBirth = picked;
-        _dobController.text = _formatDate(picked);
-        _dobError = null;
-      });
+      registrationNotifier.updateDateOfBirth(picked);
+      _dobController.text = _formatDate(picked);
     }
   }
 
@@ -566,8 +632,21 @@ class _RegisterPageState extends State<RegisterPage> {
   }
 
   void _nextPage() {
-    if (!_validateStep(_currentPage)) return;
+    final registrationNotifier = ref.read(registrationProvider.notifier);
+    bool isValid = false;
+
+    switch (_currentPage) {
+      case 0:
+        isValid = registrationNotifier.validateStep1();
+        break;
+      case 1:
+        isValid = registrationNotifier.validateStep2();
+        break;
+    }
+
+    if (!isValid) return;
     if (_currentPage >= 2) return;
+    
     setState(() => _currentPage += 1);
     _pageController.animateToPage(
       _currentPage,
@@ -576,42 +655,8 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
-  bool _validateStep(int step) {
-    switch (step) {
-      case 0:
-        setState(() {
-          _nameError = _nameController.text.trim().isEmpty ? 'Name is required' : null;
-          _emailError = _isValidEmail(_emailController.text.trim()) ? null : 'Enter a valid email';
-          _passwordError = _passwordController.text.length < 6 ? 'Min 6 characters' : null;
-        });
-        return _nameError == null && _emailError == null && _passwordError == null;
-      case 1:
-        setState(() {
-          _universityError = _universityController.text.trim().isEmpty ? 'University is required' : null;
-          _dobError = _dateOfBirth == null ? 'Date of birth is required' : null;
-          _genderError = (_gender == null) ? 'Please select gender' : null;
-        });
-        return _universityError == null && _dobError == null && _genderError == null;
-      case 2:
-        setState(() {
-          _bioError = _bioController.text.trim().isEmpty ? 'Please add a short description' : null;
-        });
-        if (_selectedInterests.isEmpty) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Please select at least one interest'),
-              behavior: SnackBarBehavior.floating,
-            ),
-          );
-          return false;
-        }
-        return _bioError == null;
-      default:
-        return true;
-    }
-  }
-
   Future<void> _pickProfilePhoto() async {
+    final registrationNotifier = ref.read(registrationProvider.notifier);
     final ImagePicker picker = ImagePicker();
     final XFile? picked = await picker.pickImage(
       source: ImageSource.gallery,
@@ -623,65 +668,87 @@ class _RegisterPageState extends State<RegisterPage> {
       setState(() {
         _profileImageFile = File(picked.path);
       });
+      registrationNotifier.updateProfileImage(picked.path);
     }
-  }
-
-  bool _validate() {
-    bool ok = true;
-    setState(() {
-      _nameError = _nameController.text.trim().isEmpty ? 'Name is required' : null;
-      _emailError = _isValidEmail(_emailController.text.trim()) ? null : 'Enter a valid email';
-      _passwordError = _passwordController.text.length < 6 ? 'Min 6 characters' : null;
-      _universityError = _universityController.text.trim().isEmpty ? 'University is required' : null;
-      _dobError = _dateOfBirth == null ? 'Date of birth is required' : null;
-      _genderError = (_gender == null) ? 'Please select gender' : null;
-      _bioError = _bioController.text.trim().isEmpty ? 'Please add a short description' : null;
-    });
-    // require at least one interest
-    if (_selectedInterests.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select at least one interest'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      ok = false;
-    }
-    ok &= _nameError == null;
-    ok &= _emailError == null;
-    ok &= _passwordError == null;
-    ok &= _universityError == null;
-    ok &= _dobError == null;
-    ok &= _genderError == null;
-    ok &= _bioError == null;
-    return ok;
-  }
-
-  bool _isValidEmail(String email) {
-    return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
   }
 
   Future<void> _submit() async {
+    final registrationNotifier = ref.read(registrationProvider.notifier);
+    
+    // Update state from controllers
+    registrationNotifier.updateName(_nameController.text);
+    registrationNotifier.updateEmail(_emailController.text);
+    registrationNotifier.updatePassword(_passwordController.text);
+    registrationNotifier.updateUniversity(_universityController.text);
+    registrationNotifier.updateBio(_bioController.text);
+
     // Validate all steps before submitting
-    for (int s = 0; s < 3; s++) {
-      if (!_validateStep(s)) {
-        setState(() {
-          _currentPage = s;
-        });
-        _pageController.jumpToPage(s);
-        return;
+    final registrationState = ref.read(registrationProvider);
+    bool step1Valid = registrationNotifier.validateStep1();
+    bool step2Valid = registrationNotifier.validateStep2();
+    bool step3Valid = registrationNotifier.validateStep3();
+    bool hasInterests = registrationState.interests.isNotEmpty;
+
+    if (!step1Valid || !step2Valid || !step3Valid || !hasInterests) {
+      // Navigate to first invalid step
+      if (!step1Valid) {
+        setState(() => _currentPage = 0);
+        _pageController.jumpToPage(0);
+      } else if (!step2Valid) {
+        setState(() => _currentPage = 1);
+        _pageController.jumpToPage(1);
+      } else {
+        setState(() => _currentPage = 2);
+        _pageController.jumpToPage(2);
+        if (!hasInterests) {
+          _showErrorMessage('Please select at least one interest');
+        }
       }
+      return;
     }
-    setState(() => _isLoading = true);
-    await Future.delayed(const Duration(seconds: 1));
-    if (!mounted) return;
-    setState(() => _isLoading = false);
+
+    // Perform registration
+    final success = await registrationNotifier.register();
+
+    if (success && mounted) {
+      // Success message will be shown via auth state listener
+      // Navigation will happen automatically
+    }
+  }
+
+  void _showSuccessMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Account created successfully!'),
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.check_circle, color: Colors.white),
+            const SizedBox(width: 12),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: AppColors.success,
         behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        margin: const EdgeInsets.all(16),
       ),
     );
-    Navigator.pop(context);
+  }
+
+  void _showErrorMessage(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Row(
+          children: [
+            const Icon(Icons.error_outline, color: Colors.white),
+            const SizedBox(width: 12),
+            Expanded(child: Text(message)),
+          ],
+        ),
+        backgroundColor: AppColors.error,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        margin: const EdgeInsets.all(16),
+      ),
+    );
   }
 }

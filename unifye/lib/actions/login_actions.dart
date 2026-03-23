@@ -1,169 +1,124 @@
-// import 'package:my_app/states/login_state.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:unifye/features/auth/models/login_state.dart';
+import 'package:unifye/features/auth/services/auth_service.dart';
+import 'package:unifye/features/auth/providers/auth_provider.dart';
 
-// /// Login controller - manages login state and business logic
-// class LoginController extends StateNotifier<LoginState> {
-//   LoginController() : super(const LoginState());
+/// Login Notifier - manages login form state and actions
+class LoginNotifier extends StateNotifier<LoginState> {
+  LoginNotifier(this._authService, this._authNotifier) : super(const LoginState());
 
-//   /// Update email
-//   void updateEmail(String email) {
-//     state = state.copyWith(
-//       email: email,
-//       emailError: () => null, // Clear error when user types
-//     );
-//   }
+  final AuthService _authService;
+  final AuthNotifier _authNotifier;
 
-//   /// Update password
-//   void updatePassword(String password) {
-//     state = state.copyWith(
-//       password: password,
-//       passwordError: () => null, // Clear error when user types
-//     );
-//   }
+  /// Update email field
+  void updateEmail(String email) {
+    state = state.copyWith(
+      email: email,
+      emailError: null,
+      generalError: null,
+    );
+  }
 
-//   /// Toggle password visibility
-//   void togglePasswordVisibility() {
-//     state = state.copyWith(
-//       obscurePassword: !state.obscurePassword,
-//     );
-//   }
+  /// Update password field
+  void updatePassword(String password) {
+    state = state.copyWith(
+      password: password,
+      passwordError: null,
+      generalError: null,
+    );
+  }
 
-//   /// Validate email format
-//   bool _isValidEmail(String email) {
-//     return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
-//   }
+  /// Toggle password visibility
+  void togglePasswordVisibility() {
+    state = state.copyWith(obscurePassword: !state.obscurePassword);
+  }
 
-//   /// Validate form
-//   bool _validateForm() {
-//     String? emailError;
-//     String? passwordError;
+  /// Validate email format
+  bool _isValidEmail(String email) {
+    return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
+  }
 
-//     // Validate email
-//     if (state.email.isEmpty) {
-//       emailError = 'Email is required';
-//     } else if (!_isValidEmail(state.email)) {
-//       emailError = 'Please enter a valid email';
-//     }
+  /// Validate form fields
+  bool _validateForm() {
+    bool isValid = true;
+    String? emailError;
+    String? passwordError;
 
-//     // Validate password
-//     if (state.password.isEmpty) {
-//       passwordError = 'Password is required';
-//     } else if (state.password.length < 6) {
-//       passwordError = 'Password must be at least 6 characters';
-//     }
+    // Validate Email
+    if (state.email.isEmpty) {
+      emailError = 'Email is required';
+      isValid = false;
+    } else if (!_isValidEmail(state.email)) {
+      emailError = 'Please enter a valid email';
+      isValid = false;
+    }
 
-//     // Update state with errors
-//     if (emailError != null || passwordError != null) {
-//       state = state.copyWith(
-//         emailError: () => emailError,
-//         passwordError: () => passwordError,
-//       );
-//       return false;
-//     }
+    // Validate Password
+    if (state.password.isEmpty) {
+      passwordError = 'Password is required';
+      isValid = false;
+    } else if (state.password.length < 6) {
+      passwordError = 'Password must be at least 6 characters';
+      isValid = false;
+    }
 
-//     return true;
-//   }
+    state = state.copyWith(
+      emailError: emailError,
+      passwordError: passwordError,
+    );
 
-//   /// Clear all errors
-//   void clearErrors() {
-//     state = state.copyWith(
-//       emailError: () => null,
-//       passwordError: () => null,
-//       generalError: () => null,
-//     );
-//   }
+    return isValid;
+  }
 
-//   /// Handle login - main authentication logic
-//   Future<bool> login() async {
-//     // Clear previous errors
-//     clearErrors();
+  /// Perform login
+  Future<bool> login() async {
+    // Clear previous errors
+    state = state.copyWith(
+      emailError: null,
+      passwordError: null,
+      generalError: null,
+    );
 
-//     // Validate form
-//     if (!_validateForm()) {
-//       return false;
-//     }
+    // Validate form
+    if (!_validateForm()) {
+      return false;
+    }
 
-//     // Set loading state
-//     state = state.copyWith(isLoading: true);
+    // Set loading state
+    state = state.copyWith(isLoading: true);
 
-//     try {
-//       // TODO: Replace with your actual authentication service
-//       // Example: await AuthService.signIn(state.email, state.password);
-      
-//       // Simulate API call
-//       await Future.delayed(const Duration(seconds: 2));
+    try {
+      // Call auth service and update auth state via auth notifier
+      await _authNotifier.login(state.email, state.password);
 
-//       // Simulate random success/failure for demo
-//       // Remove this and use real authentication
-//       final random = DateTime.now().second % 3;
-//       if (random == 0) {
-//         throw Exception('Invalid credentials');
-//       }
+      // Login successful
+      state = state.copyWith(isLoading: false);
+      return true;
+    } catch (e) {
+      // Handle error
+      state = state.copyWith(
+        isLoading: false,
+        passwordError: 'Invalid email or password',
+        generalError: e.toString(),
+      );
+      return false;
+    }
+  }
 
-//       // Success
-//       state = state.copyWith(isLoading: false);
-//       return true;
-//     } catch (e) {
-//       // Handle error
-//       state = state.copyWith(
-//         isLoading: false,
-//         generalError: () => e.toString(),
-//         passwordError: () => 'Invalid email or password',
-//       );
-//       return false;
-//     }
-//   }
+  /// Clear all errors
+  void clearErrors() {
+    state = state.copyWith(
+      emailError: null,
+      passwordError: null,
+      generalError: null,
+    );
+  }
+}
 
-//   /// Handle Google Sign In
-//   Future<bool> signInWithGoogle() async {
-//     state = state.copyWith(isLoading: true);
+/// Login Provider
+final loginProvider = StateNotifierProvider<LoginNotifier, LoginState>((ref) {
+  final authService = ref.watch(authServiceProvider);
+  final authNotifier = ref.read(authProvider.notifier);
+  return LoginNotifier(authService, authNotifier);
+});
 
-//     try {
-//       // TODO: Implement Google Sign In
-//       // Example:
-//       // final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
-//       // if (googleUser == null) return false;
-//       // final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-//       // await AuthService.signInWithGoogle(googleAuth);
-
-//       await Future.delayed(const Duration(seconds: 2));
-      
-//       state = state.copyWith(isLoading: false);
-//       return true;
-//     } catch (e) {
-//       state = state.copyWith(
-//         isLoading: false,
-//         generalError: () => 'Google sign in failed: ${e.toString()}',
-//       );
-//       return false;
-//     }
-//   }
-
-//   /// Handle Apple Sign In
-//   Future<bool> signInWithApple() async {
-//     state = state.copyWith(isLoading: true);
-
-//     try {
-//       // TODO: Implement Apple Sign In
-//       await Future.delayed(const Duration(seconds: 2));
-      
-//       state = state.copyWith(isLoading: false);
-//       return true;
-//     } catch (e) {
-//       state = state.copyWith(
-//         isLoading: false,
-//         generalError: () => 'Apple sign in failed: ${e.toString()}',
-//       );
-//       return false;
-//     }
-//   }
-
-//   /// Reset state (useful for logout)
-//   void reset() {
-//     state = const LoginState();
-//   }
-// }
-
-// /// Provider for login controller
-// final loginControllerProvider = StateNotifierProvider<LoginController, LoginState>(
-//   (ref) => LoginController(),
-// );

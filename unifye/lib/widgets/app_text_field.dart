@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:my_app/core/theme/app_colour.dart';
+import 'package:unifye/core/theme/app_colour.dart';
 
 enum AppInputType {
   text,

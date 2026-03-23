@@ -1,24 +1,24 @@
 import 'package:flutter/material.dart';
-import 'package:my_app/core/theme/app_colour.dart';
-import 'package:my_app/widgets/app_button.dart';
-import 'package:my_app/widgets/app_text_field.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:unifye/core/theme/app_colour.dart';
+import 'package:unifye/widgets/app_button.dart';
+import 'package:unifye/widgets/app_text_field.dart';
+import 'package:unifye/actions/login_actions.dart';
+import 'package:unifye/features/auth/providers/auth_provider.dart';
+import 'package:unifye/features/auth/models/auth_state.dart';
 import 'register-page.dart';
 
-class LoginPage extends StatefulWidget {
+class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({Key? key}) : super(key: key);
 
   @override
-  State<LoginPage> createState() => _LoginPageState();
+  ConsumerState<LoginPage> createState() => _LoginPageState();
 }
 
-class _LoginPageState extends State<LoginPage> {
+class _LoginPageState extends ConsumerState<LoginPage> {
   final _formKey = GlobalKey<FormState>();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
-  
-  bool _isLoading = false;
-  String? _emailError;
-  String? _passwordError;
 
   @override
   void dispose() {
@@ -29,6 +29,37 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    final loginState = ref.watch(loginProvider);
+    final loginNotifier = ref.read(loginProvider.notifier);
+
+    // Sync controllers with state (only if different to avoid cursor jumping)
+    if (_emailController.text != loginState.email) {
+      _emailController.text = loginState.email;
+      _emailController.selection = TextSelection.fromPosition(
+        TextPosition(offset: _emailController.text.length),
+      );
+    }
+    if (_passwordController.text != loginState.password && !loginState.obscurePassword) {
+      _passwordController.text = loginState.password;
+      _passwordController.selection = TextSelection.fromPosition(
+        TextPosition(offset: _passwordController.text.length),
+      );
+    }
+
+    // Listen to auth state changes
+    ref.listen<AuthState>(authProvider, (previous, next) {
+      next.when(
+        unauthenticated: () {},
+        authenticated: (user, token) {
+          // Navigation is handled by AppRouter when auth state changes.
+          if (mounted) {
+            _showSuccessMessage('Login successful!');
+          }
+        },
+        loading: () {},
+      );
+    });
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -53,12 +84,10 @@ class _LoginPageState extends State<LoginPage> {
                     controller: _emailController,
                     inputType: AppInputType.email,
                     prefixIcon: Icons.email_outlined,
-                    errorText: _emailError,
+                    errorText: loginState.emailError,
                     textInputAction: TextInputAction.next,
                     onChanged: (value) {
-                      if (_emailError != null) {
-                        setState(() => _emailError = null);
-                      }
+                      loginNotifier.updateEmail(value);
                     },
                   ),
                   
@@ -69,15 +98,15 @@ class _LoginPageState extends State<LoginPage> {
                     label: 'Password',
                     hint: 'Enter your password',
                     controller: _passwordController,
-                    inputType: AppInputType.password,
+                    inputType: loginState.obscurePassword 
+                        ? AppInputType.password 
+                        : AppInputType.text,
                     prefixIcon: Icons.lock_outline,
-                    errorText: _passwordError,
+                    errorText: loginState.passwordError,
                     textInputAction: TextInputAction.done,
                     onSubmitted: (_) => _handleLogin(),
                     onChanged: (value) {
-                      if (_passwordError != null) {
-                        setState(() => _passwordError = null);
-                      }
+                      loginNotifier.updatePassword(value);
                     },
                   ),
                   
@@ -100,7 +129,7 @@ class _LoginPageState extends State<LoginPage> {
                   AppButton(
                     text: 'Sign In',
                     onPressed: _handleLogin,
-                    isLoading: _isLoading,
+                    isLoading: loginState.isLoading,
                     isFullWidth: true,
                     size: AppButtonSize.large,
                   ),
@@ -251,78 +280,25 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  // Form Validation
-  bool _validateForm() {
-    bool isValid = true;
-
-    // Validate Email
-    if (_emailController.text.isEmpty) {
-      setState(() => _emailError = 'Email is required');
-      isValid = false;
-    } else if (!_isValidEmail(_emailController.text)) {
-      setState(() => _emailError = 'Please enter a valid email');
-      isValid = false;
-    }
-
-    // Validate Password
-    if (_passwordController.text.isEmpty) {
-      setState(() => _passwordError = 'Password is required');
-      isValid = false;
-    } else if (_passwordController.text.length < 6) {
-      setState(() => _passwordError = 'Password must be at least 6 characters');
-      isValid = false;
-    }
-
-    return isValid;
-  }
-
-  bool _isValidEmail(String email) {
-    return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
-  }
-
   // Button Handlers
   Future<void> _handleLogin() async {
-    // Clear previous errors
-    setState(() {
-      _emailError = null;
-      _passwordError = null;
-    });
+    final loginNotifier = ref.read(loginProvider.notifier);
+    
+    // Update state from controllers
+    loginNotifier.updateEmail(_emailController.text);
+    loginNotifier.updatePassword(_passwordController.text);
 
-    // Validate form
-    if (!_validateForm()) {
-      return;
-    }
+    // Perform login
+    final success = await loginNotifier.login();
 
-    setState(() => _isLoading = true);
-
-    try {
-      // TODO: Replace with your actual authentication logic
-      // Example: await AuthService.signIn(email, password);
-      
-      // Simulate API call
-      await Future.delayed(const Duration(seconds: 2));
-
-      // On successful login
-      if (mounted) {
-        _showSuccessMessage('Login successful!');
-        
-        // TODO: Navigate to home screen
-        // Navigator.pushReplacement(
-        //   context,
-        //   MaterialPageRoute(builder: (context) => const HomeScreen()),
-        // );
-      }
-    } catch (e) {
-      // Handle error
-      if (mounted) {
-        setState(() {
-          _passwordError = 'Invalid email or password';
-        });
-        _showErrorMessage('Login failed. Please try again.');
-      }
-    } finally {
-      if (mounted) {
-        setState(() => _isLoading = false);
+    if (!success && mounted) {
+      final loginState = ref.read(loginProvider);
+      if (loginState.generalError != null) {
+        _showErrorMessage(loginState.generalError!);
+      } else if (loginState.passwordError != null) {
+        _showErrorMessage(loginState.passwordError!);
+      } else if (loginState.emailError != null) {
+        _showErrorMessage(loginState.emailError!);
       }
     }
   }
