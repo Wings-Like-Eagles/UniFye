@@ -10,7 +10,7 @@ import 'package:unifye/features/auth/providers/auth_provider.dart';
 import 'package:unifye/features/auth/models/auth_state.dart';
 
 class RegisterPage extends ConsumerStatefulWidget {
-  const RegisterPage({Key? key}) : super(key: key);
+  const RegisterPage({super.key});
 
   @override
   ConsumerState<RegisterPage> createState() => _RegisterPageState();

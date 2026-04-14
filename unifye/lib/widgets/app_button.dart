@@ -28,7 +28,7 @@ class AppButton extends StatelessWidget {
   final double? customHeight;
 
   const AppButton({
-    Key? key,
+    super.key,
     required this.text,
     required this.onPressed,
     this.type = AppButtonType.primary,
@@ -39,7 +39,7 @@ class AppButton extends StatelessWidget {
     this.iconRight = false,
     this.customWidth,
     this.customHeight,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -112,7 +112,7 @@ class AppButton extends StatelessWidget {
           ),
           padding: _getPadding(),
         ).copyWith(
-          overlayColor: MaterialStateProperty.all(
+          overlayColor: WidgetStateProperty.all(
             Colors.white.withOpacity(0.1),
           ),
         );

@@ -35,7 +35,7 @@ class AppTextField extends StatefulWidget {
   final List<TextInputFormatter>? inputFormatters;
 
   const AppTextField({
-    Key? key,
+    super.key,
     this.label,
     this.hint,
     this.helperText,
@@ -57,7 +57,7 @@ class AppTextField extends StatefulWidget {
     this.focusNode,
     this.autofocus = false,
     this.inputFormatters,
-  }) : super(key: key);
+  });
 
   @override
   State<AppTextField> createState() => _AppTextFieldState();
@@ -169,7 +169,7 @@ class _AppTextFieldState extends State<AppTextField> {
                 vertical: widget.inputType == AppInputType.multiline ? 16 : 14,
               ),
               counterText: widget.maxLength != null ? null : '',
-              counterStyle: TextStyle(
+              counterStyle: const TextStyle(
                 fontSize: 12,
                 color: AppColors.textSecondary,
               ),
@@ -300,13 +300,13 @@ class AppSearchField extends StatefulWidget {
   final bool autofocus;
 
   const AppSearchField({
-    Key? key,
+    super.key,
     this.hint,
     this.controller,
     this.onChanged,
     this.onClear,
     this.autofocus = false,
-  }) : super(key: key);
+  });
 
   @override
   State<AppSearchField> createState() => _AppSearchFieldState();
