@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:unifye/features/auth/providers/auth_provider.dart';
 import 'package:unifye/features/swipe/providers/swipe_provider.dart';
 import 'package:unifye/features/swipe/widgets/swipe_user_card.dart';
+import 'package:unifye/widgets/app_button.dart';
+
+import '../core/theme/app_colour.dart';
 
 class SwipePage extends ConsumerStatefulWidget {
   const SwipePage({super.key});
@@ -89,13 +92,14 @@ class _SwipePageState extends ConsumerState<SwipePage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.people_outline, size: 48),
+            const Icon(Icons.people_outline, size: 48, color: AppColors.secondaryDark,),
             const SizedBox(height: 12),
             Text(state.infoMessage ?? 'No users available right now.'),
             const SizedBox(height: 12),
-            ElevatedButton(
+            AppButton(
               onPressed: () => ref.read(swipeProvider.notifier).loadCandidates(userId),
-              child: const Text('Reload'),
+              text: 'Reload',
+              type: AppButtonType.primary,
             ),
           ],
         ),

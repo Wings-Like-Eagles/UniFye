@@ -29,5 +29,14 @@ namespace Unifye.Controllers
 
             return Ok(result);
         }
+
+        [HttpPost]
+        public async Task<ActionResult<UserResponse>> UpdateProfile([FromForm] UpdateProfileRequest request, CancellationToken cancellationToken)
+        {
+            //// We just have to check how the id is being retrieved with the 
+            //var result = await profileService.UpdateProfileAsync(request.Id, request, cancellationToken);
+
+            return Ok();
+        }
     }
 }
