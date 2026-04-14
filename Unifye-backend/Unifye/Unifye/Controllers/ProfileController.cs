@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Unifye.DTOs;
+using Unifye.Models;
 using Unifye.Services;
 
 namespace Unifye.Controllers
@@ -17,9 +18,9 @@ namespace Unifye.Controllers
         /// <param name="cancellationToken"></param>
         /// <returns></returns>
         [HttpGet("profile")]
-        public async Task<ActionResult<UserResponse>> GetUserProfile([FromForm] UpdateProfileRequest request, CancellationToken cancellationToken)
+        public async Task<ActionResult<UserResponse>> GetUserProfile([FromForm] User request, CancellationToken cancellationToken)
         {
-            var result = await profileService.GetProfileAsync(request.id, cancellationToken);
+            var result = await profileService.GetProfileAsync(request.Id, cancellationToken);
 
             if (result == null)
             {
