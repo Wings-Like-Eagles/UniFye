@@ -30,7 +30,7 @@ public class ProfileService(
         return AuthServiceResult<UserResponse>.Ok(ToResponse(user));
     }
 
-    public async Task<AuthServiceResult<UserResponse>> UpdateProfileAsync(Guid userId, ProfileUpdateRequest request, CancellationToken cancellationToken)
+    public async Task<AuthServiceResult<UserResponse>> UpdateProfileAsync(Guid userId, UpdateProfileRequest request, CancellationToken cancellationToken)
     {
         var user = await FindUserAsync(userId, cancellationToken);
         if (user is null)
