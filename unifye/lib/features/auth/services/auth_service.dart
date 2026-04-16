@@ -2,10 +2,10 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
+import 'package:path/path.dart' as path;
 import 'package:unifye/features/auth/models/user.dart';
 import 'package:unifye/main.dart';
 import 'package:http_parser/http_parser.dart'; // Add this import
-import 'package:path/path.dart' as path;
 
 /// Authentication result model
 class AuthResult {

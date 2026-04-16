@@ -96,10 +96,24 @@ class _SwipePageState extends ConsumerState<SwipePage> {
             const SizedBox(height: 12),
             Text(state.infoMessage ?? 'No users available right now.'),
             const SizedBox(height: 12),
-            AppButton(
-              onPressed: () => ref.read(swipeProvider.notifier).loadCandidates(userId),
-              text: 'Reload',
-              type: AppButtonType.primary,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const SizedBox(width: 12),
+                AppButton(
+                  onPressed: () =>
+                      ref.read(swipeProvider.notifier).loadCandidates(userId),
+                  text: 'Change Plan',
+                  type: AppButtonType.outline,
+                ),
+                const SizedBox(width: 12),
+                AppButton(
+                  onPressed: () =>
+                      ref.read(swipeProvider.notifier).loadCandidates(userId),
+                  text: 'Reload',
+                  type: AppButtonType.primary,
+                ),
+              ],
             ),
           ],
         ),
