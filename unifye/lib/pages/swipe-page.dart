@@ -4,7 +4,6 @@ import 'package:unifye/features/auth/providers/auth_provider.dart';
 import 'package:unifye/features/swipe/providers/swipe_provider.dart';
 import 'package:unifye/features/swipe/widgets/swipe_user_card.dart';
 import 'package:unifye/widgets/app_button.dart';
-
 import '../core/theme/app_colour.dart';
 
 class SwipePage extends ConsumerStatefulWidget {
@@ -42,10 +41,20 @@ class _SwipePageState extends ConsumerState<SwipePage> {
 
         return Scaffold(
           appBar: AppBar(
-            title: const Text('Discover'),
+            title: const Text(
+              'Discover',
+              style: TextStyle(
+                color: AppColors.primary,
+                fontWeight: FontWeight.bold,
+                fontSize: 20,
+              ),
+            ),
+            backgroundColor: AppColors.surface,
+            elevation: 0.5,
+            shadowColor: AppColors.shadowLight,
             actions: [
               IconButton(
-                icon: const Icon(Icons.refresh),
+                icon: const Icon(Icons.refresh, color: AppColors.primary),
                 onPressed: swipeState.isLoading
                     ? null
                     : () => ref.read(swipeProvider.notifier).loadCandidates(user.id),
@@ -61,6 +70,7 @@ class _SwipePageState extends ConsumerState<SwipePage> {
     );
   }
 
+  // Your original _buildBody method – unchanged
   Widget _buildBody(String userId, SwipeState state) {
     if (state.isLoading && state.candidates.isEmpty) {
       return const Center(child: CircularProgressIndicator());
@@ -73,10 +83,7 @@ class _SwipePageState extends ConsumerState<SwipePage> {
           children: [
             const Icon(Icons.error_outline, size: 48),
             const SizedBox(height: 12),
-            Text(
-              state.error!,
-              textAlign: TextAlign.center,
-            ),
+            Text(state.error!, textAlign: TextAlign.center),
             const SizedBox(height: 12),
             ElevatedButton(
               onPressed: () => ref.read(swipeProvider.notifier).loadCandidates(userId),
@@ -92,24 +99,21 @@ class _SwipePageState extends ConsumerState<SwipePage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.people_outline, size: 48, color: AppColors.secondaryDark,),
+            const Icon(Icons.people_outline, size: 48, color: AppColors.secondaryDark),
             const SizedBox(height: 12),
             Text(state.infoMessage ?? 'No users available right now.'),
             const SizedBox(height: 12),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const SizedBox(width: 12),
                 AppButton(
-                  onPressed: () =>
-                      ref.read(swipeProvider.notifier).loadCandidates(userId),
+                  onPressed: () => ref.read(swipeProvider.notifier).loadCandidates(userId),
                   text: 'Change Plan',
                   type: AppButtonType.outline,
                 ),
                 const SizedBox(width: 12),
                 AppButton(
-                  onPressed: () =>
-                      ref.read(swipeProvider.notifier).loadCandidates(userId),
+                  onPressed: () => ref.read(swipeProvider.notifier).loadCandidates(userId),
                   text: 'Reload',
                   type: AppButtonType.primary,
                 ),
@@ -134,9 +138,7 @@ class _SwipePageState extends ConsumerState<SwipePage> {
                 const Positioned.fill(
                   child: ColoredBox(
                     color: Color(0x44000000),
-                    child: Center(
-                      child: CircularProgressIndicator(),
-                    ),
+                    child: Center(child: CircularProgressIndicator()),
                   ),
                 ),
             ],
@@ -146,28 +148,32 @@ class _SwipePageState extends ConsumerState<SwipePage> {
         Row(
           children: [
             Expanded(
-              child: OutlinedButton.icon(
+              child: AppButton(
                 onPressed: state.isSwiping
                     ? null
                     : () => ref.read(swipeProvider.notifier).swipeCurrent(
-                          userId: userId,
-                          isLiked: false,
-                        ),
-                icon: const Icon(Icons.close),
-                label: Text(state.isSwiping ? 'Please wait...' : 'Pass'),
+                  userId: userId,
+                  isLiked: false,
+                ),
+                text: state.isSwiping ? 'Please wait...' : 'Pass',
+                type: AppButtonType.outline,
+                icon: Icons.close,
+                isFullWidth: true,
               ),
             ),
             const SizedBox(width: 12),
             Expanded(
-              child: ElevatedButton.icon(
+              child: AppButton(
                 onPressed: state.isSwiping
                     ? null
                     : () => ref.read(swipeProvider.notifier).swipeCurrent(
-                          userId: userId,
-                          isLiked: true,
-                        ),
-                icon: const Icon(Icons.favorite),
-                label: Text(state.isSwiping ? 'Please wait...' : 'Like'),
+                  userId: userId,
+                  isLiked: true,
+                ),
+                text: state.isSwiping ? 'Please wait...' : 'Like',
+                type: AppButtonType.primary,
+                icon: Icons.favorite,
+                isFullWidth: true,
               ),
             ),
           ],
