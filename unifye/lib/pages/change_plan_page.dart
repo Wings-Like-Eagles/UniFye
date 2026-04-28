@@ -3,8 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:unifye/core/theme/app_colour.dart';
 import 'package:unifye/features/subscription/models/subscription_plan.dart';
 import 'package:unifye/features/subscription/providers/subscription_provider.dart';
-import 'package:unifye/widgets/app_button.dart';
-import 'package:url_launcher/url_launcher.dart';
+import 'package:unifye/widgets/app_button.dart';import 'package:url_launcher/url_launcher.dart';
 
 class ChangePlanPage extends ConsumerStatefulWidget {
   const ChangePlanPage({super.key});
@@ -85,32 +84,32 @@ class _ChangePlanPageState extends ConsumerState<ChangePlanPage>
       body: state.isLoadingPlans
           ? const Center(child: CircularProgressIndicator())
           : CustomScrollView(
-              slivers: [
-                SliverToBoxAdapter(child: _buildHeader()),
-                SliverToBoxAdapter(child: _buildBillingToggle()),
-                SliverPadding(
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
-                  sliver: SliverList(
-                    delegate: SliverChildBuilderDelegate(
-                      (context, index) {
-                        final plan = plans[index];
-                        return _PlanCard(
-                          plan: plan,
-                          isAnnual: _isAnnual,
-                          currentTier: mySubscription?.tier ?? 'free',
-                          isCheckingOut: _checkingOutTier == plan.tier,
-                          onSelectPlan: _handleSelectPlan,
-                          animationDelay: Duration(milliseconds: index * 80),
-                        );
-                      },
-                      childCount: plans.length,
-                    ),
-                  ),
-                ),
-                SliverToBoxAdapter(child: _buildGuaranteeFooter()),
-                const SliverToBoxAdapter(child: SizedBox(height: 32)),
-              ],
+        slivers: [
+          SliverToBoxAdapter(child: _buildHeader()),
+          SliverToBoxAdapter(child: _buildBillingToggle()),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+            sliver: SliverList(
+              delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                  final plan = plans[index];
+                  return _PlanCard(
+                    plan: plan,
+                    isAnnual: _isAnnual,
+                    currentTier: mySubscription?.tier ?? 'free',
+                    isCheckingOut: _checkingOutTier == plan.tier,
+                    onSelectPlan: _handleSelectPlan,
+                    animationDelay: Duration(milliseconds: index * 80),
+                  );
+                },
+                childCount: plans.length,
+              ),
             ),
+          ),
+          SliverToBoxAdapter(child: _buildGuaranteeFooter()),
+          const SliverToBoxAdapter(child: SizedBox(height: 32)),
+        ],
+      ),
     );
   }
 
@@ -119,7 +118,7 @@ class _ChangePlanPageState extends ConsumerState<ChangePlanPage>
       padding: EdgeInsets.fromLTRB(24, 8, 24, 16),
       child: Column(
         children: [
-           Text(
+          Text(
             'Unlock your full campus\nsocial experience 🎓',
             textAlign: TextAlign.center,
             style: TextStyle(
@@ -129,8 +128,8 @@ class _ChangePlanPageState extends ConsumerState<ChangePlanPage>
               height: 1.3,
             ),
           ),
-           SizedBox(height: 8),
-           Text(
+          SizedBox(height: 8),
+          Text(
             'Join thousands of students already connecting on UniFye.',
             textAlign: TextAlign.center,
             style: TextStyle(
@@ -165,12 +164,12 @@ class _ChangePlanPageState extends ConsumerState<ChangePlanPage>
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: !_isAnnual
                       ? [
-                          BoxShadow(
-                            color: Colors.black.withValues(),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          )
-                        ]
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.08),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    )
+                  ]
                       : null,
                 ),
                 child: Text(
@@ -198,12 +197,12 @@ class _ChangePlanPageState extends ConsumerState<ChangePlanPage>
                   borderRadius: BorderRadius.circular(24),
                   boxShadow: _isAnnual
                       ? [
-                          BoxShadow(
-                            color: Colors.black.withValues(),
-                            blurRadius: 8,
-                            offset: const Offset(0, 2),
-                          )
-                        ]
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.08),
+                      blurRadius: 8,
+                      offset: const Offset(0, 2),
+                    )
+                  ]
                       : null,
                 ),
                 child: Row(
@@ -242,7 +241,7 @@ class _ChangePlanPageState extends ConsumerState<ChangePlanPage>
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
-                          color: AppColors.success.withValues(),
+                          color: AppColors.success.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: const Text(
@@ -269,8 +268,8 @@ class _ChangePlanPageState extends ConsumerState<ChangePlanPage>
       padding: EdgeInsets.symmetric(horizontal: 24, vertical: 8),
       child: Column(
         children: [
-           Divider(),
-           SizedBox(height: 16),
+          Divider(),
+          SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
@@ -311,7 +310,8 @@ class _ChangePlanPageState extends ConsumerState<ChangePlanPage>
   Future<void> _handleSelectPlan(SubscriptionPlan plan) async {
     // Campus/Enterprise → open contact sales
     if (plan.isCampusEnterprise) {
-      final uri = Uri.parse('mailto:enterprise@unifye.app?subject=Campus%20Enterprise%20Inquiry');
+      final uri = Uri.parse(
+          'mailto:enterprise@unifye.app?subject=Campus%20Enterprise%20Inquiry');
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri);
       }
@@ -329,9 +329,9 @@ class _ChangePlanPageState extends ConsumerState<ChangePlanPage>
     final checkoutUrl = await ref
         .read(subscriptionProvider.notifier)
         .initiateCheckout(
-          targetTier: plan.tier,
-          isAnnual: _isAnnual,
-        );
+      targetTier: plan.tier,
+      isAnnual: _isAnnual,
+    );
 
     if (mounted) {
       setState(() => _checkingOutTier = null);
@@ -452,15 +452,15 @@ class _PlanCardState extends State<_PlanCard>
                 color: _isMostPopular
                     ? _planAccentColor
                     : _isCurrentPlan
-                        ? AppColors.primary.withValues()
-                        : AppColors.border,
+                    ? AppColors.primary.withValues(alpha: 0.4)
+                    : AppColors.border,
                 width: _isMostPopular ? 2.5 : 1.5,
               ),
               boxShadow: [
                 BoxShadow(
                   color: _isMostPopular
-                      ? _planAccentColor.withValues()
-                      : Colors.black.withValues(),
+                      ? _planAccentColor.withValues(alpha: 0.2)
+                      : Colors.black.withValues(alpha: 0.06),
                   blurRadius: _isMostPopular ? 20 : 8,
                   offset: const Offset(0, 4),
                 ),
@@ -532,7 +532,7 @@ class _PlanCardState extends State<_PlanCard>
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: _planAccentColor.withValues(),
+              color: _planAccentColor.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Icon(_planIcon(), color: _planAccentColor, size: 26),
@@ -558,7 +558,7 @@ class _PlanCardState extends State<_PlanCard>
                         padding: const EdgeInsets.symmetric(
                             horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
-                          color: AppColors.success.withValues(),
+                          color: AppColors.success.withValues(alpha: 0.15),
                           borderRadius: BorderRadius.circular(10),
                         ),
                         child: const Text(
@@ -642,7 +642,8 @@ class _PlanCardState extends State<_PlanCard>
       ),
       child: Column(
         children: extraFeatures
-            .map((f) => _FeatureRow(text: f.text, included: f.included, small: true))
+            .map((f) =>
+            _FeatureRow(text: f.text, included: f.included, small: true))
             .toList(),
       ),
     );
@@ -702,18 +703,16 @@ class _PlanCardState extends State<_PlanCard>
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
       child: AppButton(
         text: label,
-        onPressed: isCurrentPlan
-            ? null
-            : () => widget.onSelectPlan(widget.plan),
+        onPressed: isCurrentPlan ? null : () => widget.onSelectPlan(widget.plan),
         isLoading: widget.isCheckingOut,
         isFullWidth: true,
         type: isCurrentPlan
             ? AppButtonType.outline
             : isFree
-                ? AppButtonType.secondary
-                : _isMostPopular || isEnterprise
-                    ? AppButtonType.gradient
-                    : AppButtonType.primary,
+            ? AppButtonType.secondary
+            : _isMostPopular || isEnterprise
+            ? AppButtonType.gradient
+            : AppButtonType.primary,
       ),
     );
   }
@@ -747,8 +746,8 @@ List<_FeatureItem> _getKeyFeatures(SubscriptionPlan plan) {
     _FeatureItem(
       p.canCreateEvents
           ? p.hasUnlimitedEvents
-              ? 'Unlimited event creation'
-              : '${p.monthlyEventLimit} events/month'
+          ? 'Unlimited event creation'
+          : '${p.monthlyEventLimit} events/month'
           : 'No event creation',
       included: p.canCreateEvents,
     ),
@@ -825,9 +824,7 @@ class _FeatureRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(
-            included
-                ? Icons.check_circle_rounded
-                : Icons.cancel_rounded,
+            included ? Icons.check_circle_rounded : Icons.cancel_rounded,
             size: small ? 15 : 18,
             color: included ? AppColors.success : AppColors.textTertiary,
           ),
@@ -837,13 +834,9 @@ class _FeatureRow extends StatelessWidget {
               text,
               style: TextStyle(
                 fontSize: small ? 12 : 13,
-                color: included
-                    ? AppColors.textPrimary
-                    : AppColors.textTertiary,
-                fontWeight:
-                    included ? FontWeight.w500 : FontWeight.w400,
-                decoration:
-                    included ? null : TextDecoration.lineThrough,
+                color: included ? AppColors.textPrimary : AppColors.textTertiary,
+                fontWeight: included ? FontWeight.w500 : FontWeight.w400,
+                decoration: included ? null : TextDecoration.lineThrough,
               ),
             ),
           ),

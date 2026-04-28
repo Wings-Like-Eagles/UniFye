@@ -1,4 +1,6 @@
-﻿namespace Unifye.Models
+﻿using Unifye.Enums;
+
+namespace Unifye.Models
 {
     /// <summary>
     /// Immutable audit log entry for each subscription state change.

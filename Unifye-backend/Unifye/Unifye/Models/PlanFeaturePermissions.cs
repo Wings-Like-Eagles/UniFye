@@ -1,4 +1,6 @@
-﻿namespace Unifye.Models
+﻿using Unifye.Enums;
+
+namespace Unifye.Models
 {
     /// <summary>
     /// Concrete feature permission values for a subscription plan tier.

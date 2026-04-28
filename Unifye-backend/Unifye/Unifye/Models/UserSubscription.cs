@@ -1,4 +1,6 @@
-﻿namespace Unifye.Models
+﻿using Unifye.Enums;
+
+namespace Unifye.Models
 {
     /// <summary>
     /// The live subscription record for a user.

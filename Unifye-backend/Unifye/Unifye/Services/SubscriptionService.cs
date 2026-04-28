@@ -185,14 +185,23 @@ namespace Unifye.Services
             var (eventType, stripeEvent) = await _stripeService.ParseAndValidateWebhookAsync(
                 stripeEventJson, stripeSignature, ct);
 
+
+            var stripeEventId = (string)stripeEvent.Id;
+
             // Idempotency check — skip if we've already processed this event
             if (await _subscriptionRepository.HasProcessedStripeEventAsync(stripeEvent.Id, ct))
-            {
-                _logger.LogInformation("Skipping duplicate Stripe event {EventId}", stripeEvent.Id);
+            { 
+                _logger.LogInformation(
+    "Skipping duplicate Stripe event {EventId}",
+    stripeEventId);
                 return;
             }
 
-            _logger.LogInformation("Processing Stripe event {EventType} [{EventId}]", eventType, stripeEvent.Id);
+
+            _logger.LogInformation(
+                "Processing Stripe event {EventType} [{EventId}]",
+                eventType,
+                stripeEventId);
 
             switch (eventType)
             {

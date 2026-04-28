@@ -225,7 +225,8 @@ class _NavItem extends StatelessWidget {
                   child: Icon(
                     isActive ? tab.activeIcon : tab.inactiveIcon,
                     key: ValueKey(isActive),
-                    color: isActive ? AppColors.primary : AppColors.textTertiary,
+                    color:
+                    isActive ? AppColors.primary : AppColors.textTertiary,
                     size: 24,
                   ),
                 ),
@@ -403,12 +404,45 @@ class _SubscriptionInfoTile extends ConsumerWidget {
 }
 
 // ─── Placeholder Pages ────────────────────────────────────────────────────────
+// NOTE: Once these become real feature pages, move each one to its own file:
+//   features/events/pages/events_page.dart
+//   features/messages/pages/messages_page.dart
+//   features/profile/pages/profile_page.dart
 
-class _EventsPlaceholderPage extends ConsumerWidget {
+// ─── Events Page ──────────────────────────────────────────────────────────────
+
+class _EventsPlaceholderPage extends ConsumerStatefulWidget {
   const _EventsPlaceholderPage();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_EventsPlaceholderPage> createState() =>
+      _EventsPlaceholderPageState();
+}
+
+class _EventsPlaceholderPageState
+    extends ConsumerState<_EventsPlaceholderPage> {
+  @override
+  void initState() {
+    super.initState();
+    // Load events data when this tab is first mounted
+    _onTabActive();
+  }
+
+  void _onTabActive() {
+    // TODO: Replace with actual events load when the provider exists
+    // e.g. ref.read(eventsProvider.notifier).loadEvents();
+    debugPrint('[EventsPage] Tab became active — loading events');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Listen for when this tab becomes active again after switching away
+    ref.listen<AppTab>(activeTabProvider, (previous, next) {
+      if (next == AppTab.events && previous != AppTab.events) {
+        _onTabActive();
+      }
+    });
+
     final mySubscription = ref.watch(mySubscriptionProvider);
     final canCreate = mySubscription?.permissions.canCreateEvents ?? false;
 
@@ -428,7 +462,8 @@ class _EventsPlaceholderPage extends ConsumerWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.event_rounded, size: 64, color: AppColors.secondary),
+            const Icon(Icons.event_rounded,
+                size: 64, color: AppColors.secondary),
             const SizedBox(height: 16),
             const Text(
               'Events coming soon!',
@@ -457,18 +492,48 @@ class _EventsPlaceholderPage extends ConsumerWidget {
   }
 }
 
-class _MessagesPlaceholderPage extends StatelessWidget {
+// ─── Messages Page ────────────────────────────────────────────────────────────
+
+class _MessagesPlaceholderPage extends ConsumerStatefulWidget {
   const _MessagesPlaceholderPage();
 
   @override
+  ConsumerState<_MessagesPlaceholderPage> createState() =>
+      _MessagesPlaceholderPageState();
+}
+
+class _MessagesPlaceholderPageState
+    extends ConsumerState<_MessagesPlaceholderPage> {
+  @override
+  void initState() {
+    super.initState();
+    // Load conversations when this tab is first mounted
+    _onTabActive();
+  }
+
+  void _onTabActive() {
+    // TODO: Replace with actual messages load when the provider exists
+    // e.g. ref.read(conversationsProvider.notifier).loadConversations();
+    debugPrint('[MessagesPage] Tab became active — loading conversations');
+  }
+
+  @override
   Widget build(BuildContext context) {
+    // Listen for when this tab becomes active again after switching away
+    ref.listen<AppTab>(activeTabProvider, (previous, next) {
+      if (next == AppTab.messages && previous != AppTab.messages) {
+        _onTabActive();
+      }
+    });
+
     return Scaffold(
       appBar: AppBar(title: const Text('Messages')),
       body: const Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.chat_bubble_rounded, size: 64, color: AppColors.secondary),
+            Icon(Icons.chat_bubble_rounded,
+                size: 64, color: AppColors.secondary),
             SizedBox(height: 16),
             Text(
               'Messages coming soon!',
@@ -486,11 +551,40 @@ class _MessagesPlaceholderPage extends StatelessWidget {
   }
 }
 
-class _ProfilePlaceholderPage extends ConsumerWidget {
+// ─── Profile Page ─────────────────────────────────────────────────────────────
+
+class _ProfilePlaceholderPage extends ConsumerStatefulWidget {
   const _ProfilePlaceholderPage();
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_ProfilePlaceholderPage> createState() =>
+      _ProfilePlaceholderPageState();
+}
+
+class _ProfilePlaceholderPageState
+    extends ConsumerState<_ProfilePlaceholderPage> {
+  @override
+  void initState() {
+    super.initState();
+    // Load profile data when this tab is first mounted
+    _onTabActive();
+  }
+
+  void _onTabActive() {
+    // TODO: Refresh profile/user data when returning to this tab
+    // e.g. ref.read(authProvider.notifier).refreshUser();
+    debugPrint('[ProfilePage] Tab became active — refreshing profile');
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Listen for when this tab becomes active again after switching away
+    ref.listen<AppTab>(activeTabProvider, (previous, next) {
+      if (next == AppTab.profile && previous != AppTab.profile) {
+        _onTabActive();
+      }
+    });
+
     final authState = ref.watch(authProvider);
 
     return authState.when(
@@ -562,7 +656,7 @@ class _ProfilePlaceholderPage extends ConsumerWidget {
                   MaterialPageRoute(builder: (_) => const ChangePlanPage()),
                 ),
                 text: 'Change Plan',
-                type: AppButtonType.outline,
+                type: AppButtonType.primary,
                 icon: Icons.workspace_premium_rounded,
                 isFullWidth: true,
               ),
@@ -576,7 +670,7 @@ class _ProfilePlaceholderPage extends ConsumerWidget {
               child: AppButton(
                 onPressed: () => ref.read(authProvider.notifier).logout(),
                 text: 'Sign Out',
-                type: AppButtonType.text,
+                type: AppButtonType.outline,
                 icon: Icons.logout_rounded,
                 isFullWidth: true,
               ),
