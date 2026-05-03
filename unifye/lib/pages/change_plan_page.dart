@@ -3,7 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:unifye/core/theme/app_colour.dart';
 import 'package:unifye/features/subscription/models/subscription_plan.dart';
 import 'package:unifye/features/subscription/providers/subscription_provider.dart';
-import 'package:unifye/widgets/app_button.dart';import 'package:url_launcher/url_launcher.dart';
+import 'package:unifye/widgets/app_button.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ChangePlanPage extends ConsumerStatefulWidget {
   const ChangePlanPage({super.key});
@@ -25,16 +26,8 @@ class _ChangePlanPageState extends ConsumerState<ChangePlanPage>
       vsync: this,
       duration: const Duration(milliseconds: 300),
     )..forward();
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final state = ref.read(subscriptionProvider);
-      if (state.plans.isEmpty) {
-        ref.read(subscriptionProvider.notifier).loadPlans();
-      }
-      if (state.mySubscription == null) {
-        ref.read(subscriptionProvider.notifier).loadMySubscription();
-      }
-    });
+    // ✓ Removed redundant postFrameCallback — the notifier constructor
+    //   already calls loadPlans() and loadMySubscription() on creation.
   }
 
   @override
@@ -81,35 +74,89 @@ class _ChangePlanPageState extends ConsumerState<ChangePlanPage>
         ),
         centerTitle: true,
       ),
-      body: state.isLoadingPlans
-          ? const Center(child: CircularProgressIndicator())
-          : CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(child: _buildHeader()),
-          SliverToBoxAdapter(child: _buildBillingToggle()),
-          SliverPadding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
-            sliver: SliverList(
-              delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                  final plan = plans[index];
-                  return _PlanCard(
-                    plan: plan,
-                    isAnnual: _isAnnual,
-                    currentTier: mySubscription?.tier ?? 'free',
-                    isCheckingOut: _checkingOutTier == plan.tier,
-                    onSelectPlan: _handleSelectPlan,
-                    animationDelay: Duration(milliseconds: index * 80),
-                  );
-                },
-                childCount: plans.length,
+      body: _buildBody(state, plans, mySubscription),
+    );
+  }
+
+  Widget _buildBody(
+      SubscriptionState state,
+      List<SubscriptionPlan> plans,
+      UserSubscriptionStatus? mySubscription,
+      ) {
+    // Loading
+    if (state.isLoadingPlans) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    // Error with no plans loaded — show inline error + retry
+    if (state.error != null && plans.isEmpty) {
+      return Center(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(
+                Icons.wifi_off_rounded,
+                size: 48,
+                color: AppColors.textTertiary,
               ),
+              const SizedBox(height: 12),
+              Text(
+                state.error!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: AppColors.textSecondary),
+              ),
+              const SizedBox(height: 16),
+              AppButton(
+                text: 'Retry',
+                onPressed: () =>
+                    ref.read(subscriptionProvider.notifier).loadPlans(),
+                type: AppButtonType.secondary,
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    // No plans returned (backend returned empty list)
+    if (plans.isEmpty) {
+      return const Center(
+        child: Text(
+          'No plans available.',
+          style: TextStyle(color: AppColors.textSecondary),
+        ),
+      );
+    }
+
+    // Happy path
+    return CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(child: _buildHeader()),
+        SliverToBoxAdapter(child: _buildBillingToggle()),
+        SliverPadding(
+          padding: const EdgeInsets.fromLTRB(16, 0, 16, 32),
+          sliver: SliverList(
+            delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                final plan = plans[index];
+                return _PlanCard(
+                  plan: plan,
+                  isAnnual: _isAnnual,
+                  currentTier: mySubscription?.tier ?? 'free',
+                  isCheckingOut: _checkingOutTier == plan.tier,
+                  onSelectPlan: _handleSelectPlan,
+                  animationDelay: Duration(milliseconds: index * 80),
+                );
+              },
+              childCount: plans.length,
             ),
           ),
-          SliverToBoxAdapter(child: _buildGuaranteeFooter()),
-          const SliverToBoxAdapter(child: SizedBox(height: 32)),
-        ],
-      ),
+        ),
+        SliverToBoxAdapter(child: _buildGuaranteeFooter()),
+        const SliverToBoxAdapter(child: SizedBox(height: 32)),
+      ],
     );
   }
 
@@ -273,8 +320,7 @@ class _ChangePlanPageState extends ConsumerState<ChangePlanPage>
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.verified_rounded,
-                  color: AppColors.success, size: 18),
+              Icon(Icons.verified_rounded, color: AppColors.success, size: 18),
               SizedBox(width: 8),
               Text(
                 '7-day free trial on Plus & Community Pro',
@@ -318,7 +364,7 @@ class _ChangePlanPageState extends ConsumerState<ChangePlanPage>
       return;
     }
 
-    // Free → just navigate back (user is already on free or we do nothing)
+    // Free → just navigate back
     if (plan.isFree) {
       Navigator.of(context).pop();
       return;
@@ -469,16 +515,9 @@ class _PlanCardState extends State<_PlanCard>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Badge row
                 if (widget.plan.badgeLabel != null) _buildBadge(),
-
-                // Plan header
                 _buildPlanHeader(),
-
-                // Feature list (always show key features, expandable for all)
                 _buildFeatureList(),
-
-                // Expandable extra features
                 AnimatedSize(
                   duration: const Duration(milliseconds: 250),
                   curve: Curves.easeInOut,
@@ -486,13 +525,8 @@ class _PlanCardState extends State<_PlanCard>
                       ? _buildExpandedFeatures()
                       : const SizedBox.shrink(),
                 ),
-
-                // Expand/collapse hint
                 _buildExpandToggle(),
-
-                // CTA button
                 _buildCTAButton(),
-
                 const SizedBox(height: 4),
               ],
             ),
@@ -528,7 +562,6 @@ class _PlanCardState extends State<_PlanCard>
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Plan icon
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
@@ -588,8 +621,6 @@ class _PlanCardState extends State<_PlanCard>
               ],
             ),
           ),
-
-          // Price column
           Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -703,7 +734,8 @@ class _PlanCardState extends State<_PlanCard>
       padding: const EdgeInsets.fromLTRB(20, 4, 20, 16),
       child: AppButton(
         text: label,
-        onPressed: isCurrentPlan ? null : () => widget.onSelectPlan(widget.plan),
+        onPressed:
+        isCurrentPlan ? null : () => widget.onSelectPlan(widget.plan),
         isLoading: widget.isCheckingOut,
         isFullWidth: true,
         type: isCurrentPlan
@@ -834,8 +866,10 @@ class _FeatureRow extends StatelessWidget {
               text,
               style: TextStyle(
                 fontSize: small ? 12 : 13,
-                color: included ? AppColors.textPrimary : AppColors.textTertiary,
-                fontWeight: included ? FontWeight.w500 : FontWeight.w400,
+                color:
+                included ? AppColors.textPrimary : AppColors.textTertiary,
+                fontWeight:
+                included ? FontWeight.w500 : FontWeight.w400,
                 decoration: included ? null : TextDecoration.lineThrough,
               ),
             ),

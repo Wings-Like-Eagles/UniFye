@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Unifye")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+0dafa86f1146c33214b98cce9dd46c333f998baa")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+f7a55276f56449ab98c8aa898575b7aa2f4ed602")]
 [assembly: System.Reflection.AssemblyProductAttribute("Unifye")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Unifye")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

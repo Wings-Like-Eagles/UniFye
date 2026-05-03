@@ -1,5 +1,3 @@
-// lib/features/subscription/providers/subscription_provider.dart
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:unifye/features/auth/providers/auth_provider.dart';
 import 'package:unifye/features/subscription/models/subscription_plan.dart';
@@ -44,7 +42,8 @@ class SubscriptionState {
       isLoadingMyPlan: isLoadingMyPlan ?? this.isLoadingMyPlan,
       isCheckingOut: isCheckingOut ?? this.isCheckingOut,
       error: clearError ? null : (error ?? this.error),
-      successMessage: clearSuccess ? null : (successMessage ?? this.successMessage),
+      successMessage:
+      clearSuccess ? null : (successMessage ?? this.successMessage),
     );
   }
 }
@@ -53,15 +52,23 @@ class SubscriptionState {
 
 class SubscriptionNotifier extends StateNotifier<SubscriptionState> {
   final SubscriptionApiService _service;
+  final String? _token;
 
-  SubscriptionNotifier(this._service) : super(const SubscriptionState());
+  SubscriptionNotifier(this._service, this._token)
+      : super(const SubscriptionState()) {
+    loadPlans();
+    if (_token != null) loadMySubscription();
+  }
 
   Future<void> loadPlans() async {
+    print('[SubscriptionNotifier] loadPlans called');
     state = state.copyWith(isLoadingPlans: true, clearError: true);
     try {
       final plans = await _service.fetchAllPlans();
+      print('[SubscriptionNotifier] loaded ${plans.length} plans');
       state = state.copyWith(plans: plans, isLoadingPlans: false);
     } catch (e) {
+      print('[SubscriptionNotifier] loadPlans error: $e');
       state = state.copyWith(
         isLoadingPlans: false,
         error: 'Failed to load subscription plans. Please try again.',
@@ -75,6 +82,7 @@ class SubscriptionNotifier extends StateNotifier<SubscriptionState> {
       final sub = await _service.fetchMySubscription();
       state = state.copyWith(mySubscription: sub, isLoadingMyPlan: false);
     } catch (e) {
+      print('[SubscriptionNotifier] loadMySubscription error: $e');
       state = state.copyWith(
         isLoadingMyPlan: false,
         error: 'Failed to load your subscription.',
@@ -120,14 +128,15 @@ class SubscriptionNotifier extends StateNotifier<SubscriptionState> {
 // ─── Providers ────────────────────────────────────────────────────────────────
 
 final subscriptionProvider =
-    StateNotifierProvider<SubscriptionNotifier, SubscriptionState>((ref) {
-  final authState = ref.watch(authProvider);
-  final token = authState.maybeWhen(
+StateNotifierProvider<SubscriptionNotifier, SubscriptionState>((ref) {
+  // Use ref.read so auth state changes don't tear down the notifier
+  // and wipe already-loaded plans. Invalidate manually on login/logout instead.
+  final token = ref.read(authProvider).maybeWhen(
     authenticated: (user, token) => token,
     orElse: () => null,
   );
-  final service = ref.watch(subscriptionServiceProvider(token));
-  return SubscriptionNotifier(service);
+  final service = SubscriptionApiService(token: token);
+  return SubscriptionNotifier(service, token);
 });
 
 /// Convenience provider — returns the current user's subscription, or null

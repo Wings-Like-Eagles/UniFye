@@ -12,12 +12,17 @@ class SubscriptionApiService {
 
   SubscriptionApiService({String? token})
       : _base = baseUrl,
-        _token = token;
+        _token = (token != null && token.isNotEmpty) ? token : null; // ← guard empty string
 
-  Map<String, String> get _headers => {
-        'Content-Type': 'application/json',
-        if (_token != null) 'Authorization': 'Bearer $_token',
-      };
+  bool get _hasToken => _token != null && _token!.isNotEmpty;
+
+  Map<String, String> get _headers {
+    print('[SubscriptionApiService] token: ${_hasToken ? "present (${_token!.length} chars)" : "NULL/EMPTY"}');
+    return {
+      'Content-Type': 'application/json',
+      if (_hasToken) 'Authorization': 'Bearer $_token',
+    };
+  }
 
   /// Fetches all available subscription plans (public endpoint)
   Future<List<SubscriptionPlan>> fetchAllPlans() async {
@@ -36,6 +41,9 @@ class SubscriptionApiService {
 
   /// Fetches the current user's subscription and permissions
   Future<UserSubscriptionStatus> fetchMySubscription() async {
+    if (!_hasToken) {
+      throw Exception('Cannot fetch subscription: no auth token available.');
+    }
     final res = await http.get(
       Uri.parse('$_base/api/subscriptions/me'),
       headers: _headers,
@@ -55,6 +63,9 @@ class SubscriptionApiService {
     String successUrl = 'https://unifye.app/payment/success',
     String cancelUrl = 'https://unifye.app/payment/cancel',
   }) async {
+    if (!_hasToken) {
+      throw Exception('Cannot create checkout session: no auth token available.');
+    }
     final res = await http.post(
       Uri.parse('$_base/api/subscriptions/checkout'),
       headers: _headers,
@@ -76,6 +87,9 @@ class SubscriptionApiService {
   Future<String> createBillingPortalSession({
     String returnUrl = 'https://unifye.app/settings',
   }) async {
+    if (!_hasToken) {
+      throw Exception('Cannot open billing portal: no auth token available.');
+    }
     final res = await http.post(
       Uri.parse('$_base/api/subscriptions/billing-portal'),
       headers: _headers,
@@ -89,6 +103,7 @@ class SubscriptionApiService {
   }
 }
 
-final subscriptionServiceProvider = Provider.family<SubscriptionApiService, String?>(
-  (ref, token) => SubscriptionApiService(token: token),
+final subscriptionServiceProvider =
+Provider.family<SubscriptionApiService, String?>(
+      (ref, token) => SubscriptionApiService(token: token),
 );
