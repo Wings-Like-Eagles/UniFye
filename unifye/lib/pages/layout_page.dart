@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:unifye/pages/profile_plan_page.dart' show ProfilePage;
 import 'package:unifye/pages/swipe-page.dart';
 
 import '../core/theme/app_colour.dart';
@@ -7,6 +8,7 @@ import '../features/auth/providers/auth_provider.dart';
 import '../features/subscription/models/subscription_plan.dart';
 import '../features/subscription/providers/subscription_provider.dart';
 import '../widgets/app_button.dart';
+import '../widgets/app_top_bar.dart' hide ProfilePage;
 import 'change_plan_page.dart';
 
 // ─── Tab Definitions ──────────────────────────────────────────────────────────
@@ -127,7 +129,7 @@ class _TabNavigator extends StatelessWidget {
       case AppTab.messages:
         return const _MessagesPlaceholderPage();
       case AppTab.profile:
-        return const _ProfilePlaceholderPage();
+        return const ProfilePage();
     }
   }
 }

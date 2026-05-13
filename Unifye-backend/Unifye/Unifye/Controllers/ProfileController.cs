@@ -1,7 +1,7 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Unifye.DTOs;
-using Unifye.Models;
 using Unifye.Services;
 
 namespace Unifye.Controllers
@@ -11,32 +11,74 @@ namespace Unifye.Controllers
     [Authorize]
     public class ProfileController(IProfileService profileService) : ControllerBase
     {
-        /// <summary>
-        /// Retrieves the user's profile data. In order to show the profile data for the user but also to the matching card. 
-        /// </summary>
-        /// <param name="request"></param>
-        /// <param name="cancellationToken"></param>
-        /// <returns></returns>
-        [HttpGet("profile")]
-        public async Task<ActionResult<UserResponse>> GetUserProfile([FromForm] User request, CancellationToken cancellationToken)
+        // ─── GET api/profile ──────────────────────────────────────────────────
+        [HttpGet]
+        public async Task<ActionResult<UserResponse>> GetUserProfile(CancellationToken cancellationToken)
         {
-            var result = await profileService.GetProfileAsync(request.Id, cancellationToken);
+            var userId = GetUserId();
+            if (userId is null) return Unauthorized();
 
-            if (result == null)
-            {
-                return new NotFoundResult();
-            }
+            var result = await profileService.GetProfileAsync(userId.Value, cancellationToken);
 
-            return Ok(result);
+            return result.Success
+                ? Ok(result.Data)
+                : StatusCode(result.StatusCode, result.ErrorMessage);
         }
 
-        [HttpPost]
-        public async Task<ActionResult<UserResponse>> UpdateProfile([FromForm] UpdateProfileRequest request, CancellationToken cancellationToken)
+        // ─── PUT api/profile ──────────────────────────────────────────────────
+        [HttpPut]
+        public async Task<ActionResult<UserResponse>> UpdateProfile(
+            [FromForm] UpdateProfileRequest request,
+            CancellationToken cancellationToken)
         {
-            //// We just have to check how the id is being retrieved with the 
-            //var result = await profileService.UpdateProfileAsync(request.Id, request, cancellationToken);
+            var userId = GetUserId();
+            if (userId is null) return Unauthorized();
 
-            return Ok();
+            var result = await profileService.UpdateProfileAsync(userId.Value, request, cancellationToken);
+
+            return result.Success
+                ? Ok(result.Data)
+                : StatusCode(result.StatusCode, result.ErrorMessage);
+        }
+
+        // ─── PUT api/profile/image ────────────────────────────────────────────
+        [HttpPut("image")]
+        public async Task<ActionResult<UserResponse>> UpdateProfileImage(
+            IFormFile image,
+            CancellationToken cancellationToken)
+        {
+            var userId = GetUserId();
+            if (userId is null) return Unauthorized();
+
+            if (image is null || image.Length == 0)
+                return BadRequest("No image file was provided.");
+
+            var result = await profileService.UpdateProfileImageAsync(userId.Value, image, cancellationToken);
+
+            return result.Success
+                ? Ok(result.Data)
+                : StatusCode(result.StatusCode, result.ErrorMessage);
+        }
+
+        // ─── DELETE api/profile/image ─────────────────────────────────────────
+        [HttpDelete("image")]
+        public async Task<ActionResult<UserResponse>> DeleteProfileImage(CancellationToken cancellationToken)
+        {
+            var userId = GetUserId();
+            if (userId is null) return Unauthorized();
+
+            var result = await profileService.DeleteProfileImageAsync(userId.Value, cancellationToken);
+
+            return result.Success
+                ? Ok(result.Data)
+                : StatusCode(result.StatusCode, result.ErrorMessage);
+        }
+
+        // ─── Private helpers ──────────────────────────────────────────────────
+        private Guid? GetUserId()
+        {
+            var claim = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            return Guid.TryParse(claim, out var id) ? id : null;
         }
     }
 }
