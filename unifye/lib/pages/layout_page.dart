@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:unifye/pages/message_page.dart';
 import 'package:unifye/pages/profile_plan_page.dart' show ProfilePage;
 import 'package:unifye/pages/swipe-page.dart';
 
@@ -115,19 +116,47 @@ class _TabNavigator extends StatelessWidget {
       key: navigatorKey,
       onGenerateRoute: (settings) => MaterialPageRoute(
         settings: settings,
-        builder: (_) => _buildTabRoot(tab),
+        builder: (context) => Consumer(
+          builder: (context, ref, _) {
+            return _buildTabRoot(context, ref, tab);
+          },
+        ),
       ),
     );
   }
 
-  Widget _buildTabRoot(AppTab tab) {
+  Widget _buildTabRoot(BuildContext context, WidgetRef ref, AppTab tab) {
+    final authState = ref.watch(authProvider);
+
     switch (tab) {
       case AppTab.discover:
         return const SwipePage();
+
       case AppTab.events:
         return const _EventsPlaceholderPage();
+
       case AppTab.messages:
-        return const _MessagesPlaceholderPage();
+        return authState.when(
+          unauthenticated: () => const Scaffold(
+            body: Center(
+              child: Text('Please login'),
+            ),
+          ),
+
+          loading: () => const Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(),
+            ),
+          ),
+
+          authenticated: (user, token) {
+            return MessagePage(
+              userName: user.name,
+              imageUrl: user.photoUrl,
+            );
+          },
+        );
+
       case AppTab.profile:
         return const ProfilePage();
     }

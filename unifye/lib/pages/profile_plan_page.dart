@@ -8,6 +8,7 @@ import 'package:unifye/pages/change_plan_page.dart';
 import 'package:unifye/widgets/app_button.dart';
 
 import '../features/profile/providers/profile_provider.dart';
+import 'package:unifye/main.dart' show baseUrl;
 
 class ProfilePage extends ConsumerStatefulWidget {
   const ProfilePage({super.key});
@@ -102,7 +103,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  Text(
+                  const Text(
                     'UniFye v1.0.0',
                     style: TextStyle(
                       fontSize: 12,
@@ -171,9 +172,7 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
                       child: CircleAvatar(
                         radius: 48,
                         backgroundColor: AppColors.secondary,
-                        backgroundImage: user.photoUrl != null
-                            ? NetworkImage(user.photoUrl!)
-                            : null,
+                        backgroundImage: _buildImageProvider(user.photoUrl),
                         child: user.photoUrl == null
                             ? Text(
                           user.name.isNotEmpty
@@ -527,5 +526,17 @@ class _ProfilePageState extends ConsumerState<ProfilePage> {
   String _formatDate(DateTime? date) {
     if (date == null) return '';
     return '${date.day}/${date.month}/${date.year}';
+  }
+
+  ImageProvider? _buildImageProvider(String? url) {
+    if (url == null || url.isEmpty) return null;
+
+    // Resolve relative paths — belt AND braces since the repository
+    // should already do this, but the URL is arriving unresolved.
+    final resolved = url.startsWith('http')
+        ? url
+        : '${baseUrl}$url';
+
+    return NetworkImage(resolved);
   }
 }

@@ -4,9 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
 import 'package:mime/mime.dart';
+import 'package:unifye/main.dart' show baseUrl;           // ← correct import
 import 'package:unifye/features/profile/models/user_response.dart';
-
-import '../../../main.dart' as ApiConstants;
 
 final profileRepositoryProvider = Provider<ProfileRepository>(
       (ref) => ProfileRepository(),
@@ -17,16 +16,11 @@ class ProfileRepository {
 
   Future<UserResponse> getProfile(String token) async {
     final response = await http.get(
-      Uri.parse('${ApiConstants.baseUrl}/api/profile'),
+      Uri.parse('$baseUrl/api/profile'),                  // ← no prefix
       headers: _authHeaders(token),
     );
 
-    if (response.statusCode == 200) {
-      return UserResponse.fromJson(
-        jsonDecode(response.body) as Map<String, dynamic>,
-      );
-    }
-
+    if (response.statusCode == 200) return _parseResponse(response.body);
     throw _parseError(response);
   }
 
@@ -42,7 +36,7 @@ class ProfileRepository {
       }) async {
     final request = http.MultipartRequest(
       'PUT',
-      Uri.parse('${ApiConstants.baseUrl}/api/profile'),
+      Uri.parse('$baseUrl/api/profile'),
     )..headers.addAll(_authHeaders(token));
 
     if (firstName != null) request.fields['firstName'] = firstName;
@@ -54,12 +48,7 @@ class ProfileRepository {
     final streamed = await request.send();
     final response = await http.Response.fromStream(streamed);
 
-    if (response.statusCode == 200) {
-      return UserResponse.fromJson(
-        jsonDecode(response.body) as Map<String, dynamic>,
-      );
-    }
-
+    if (response.statusCode == 200) return _parseResponse(response.body);
     throw _parseError(response);
   }
 
@@ -71,7 +60,7 @@ class ProfileRepository {
 
     final request = http.MultipartRequest(
       'PUT',
-      Uri.parse('${ApiConstants.baseUrl}/api/profile/image'),
+      Uri.parse('$baseUrl/api/profile/image'),
     )
       ..headers.addAll(_authHeaders(token))
       ..files.add(await http.MultipartFile.fromPath(
@@ -83,12 +72,7 @@ class ProfileRepository {
     final streamed = await request.send();
     final response = await http.Response.fromStream(streamed);
 
-    if (response.statusCode == 200) {
-      return UserResponse.fromJson(
-        jsonDecode(response.body) as Map<String, dynamic>,
-      );
-    }
-
+    if (response.statusCode == 200) return _parseResponse(response.body);
     throw _parseError(response);
   }
 
@@ -96,20 +80,26 @@ class ProfileRepository {
 
   Future<UserResponse> deleteProfileImage(String token) async {
     final response = await http.delete(
-      Uri.parse('${ApiConstants.baseUrl}/api/profile/image'),
+      Uri.parse('$baseUrl/api/profile/image'),
       headers: _authHeaders(token),
     );
 
-    if (response.statusCode == 200) {
-      return UserResponse.fromJson(
-        jsonDecode(response.body) as Map<String, dynamic>,
-      );
-    }
-
+    if (response.statusCode == 200) return _parseResponse(response.body);
     throw _parseError(response);
   }
 
-  // ─── Helpers ────────────────────────────────────────────────────────────────
+  // ─── Private helpers ────────────────────────────────────────────────────────
+
+  UserResponse _parseResponse(String body) {
+    final json = jsonDecode(body) as Map<String, dynamic>;
+
+    final rawImageUrl = json['imageUrl'] as String?;
+    if (rawImageUrl != null && !rawImageUrl.startsWith('http')) {
+      json['imageUrl'] = '$baseUrl$rawImageUrl';
+    }
+
+    return UserResponse.fromJson(json);
+  }
 
   Map<String, String> _authHeaders(String token) => {
     'Authorization': 'Bearer $token',
@@ -119,7 +109,8 @@ class ProfileRepository {
   Exception _parseError(http.Response response) {
     try {
       final body = jsonDecode(response.body);
-      final message = body is String ? body : body['message'] ?? 'Unknown error';
+      final message =
+      body is String ? body : body['message'] ?? 'Unknown error';
       return Exception(message);
     } catch (_) {
       return Exception('Request failed (${response.statusCode})');

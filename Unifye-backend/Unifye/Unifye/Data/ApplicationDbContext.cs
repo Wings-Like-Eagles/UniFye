@@ -15,6 +15,8 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
     public DbSet<UserSubscription> UserSubscriptions => Set<UserSubscription>();
     public DbSet<SubscriptionHistory> SubscriptionHistories => Set<SubscriptionHistory>();
     public DbSet<ProcessedStripeEvent> ProcessedStripeEvents => Set<ProcessedStripeEvent>();
+    public DbSet<Message> Messages => Set<Message>();
+    public DbSet<Conversation> Conversations => Set<Conversation>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -96,5 +98,41 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
             .ToTable("processed_stripe_events")
             .HasIndex(e => e.StripeEventId)
             .IsUnique();
+
+        // ─── Message and Conversation ─────────────────────────────────────────
+
+        modelBuilder.Entity<Message>(entity =>
+        {
+            entity.ToTable("messages");
+
+            entity.HasKey(x => x.Id);
+
+            entity.Property(x => x.Content)
+                .IsRequired()
+                .HasMaxLength(4000);
+
+            entity.HasOne(x => x.Sender)
+                .WithMany()
+                .HasForeignKey(x => x.SenderId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            entity.HasOne(x => x.Receiver)
+                .WithMany()
+                .HasForeignKey(x => x.ReceiverId)
+                .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<Conversation>(entity =>
+        {
+            entity.ToTable("conversations");
+
+            entity.HasKey(x => x.Id);
+
+            entity.HasIndex(x => new
+            {
+                x.UserOneId,
+                x.UserTwoId
+            }).IsUnique();
+        });
     }
 }
