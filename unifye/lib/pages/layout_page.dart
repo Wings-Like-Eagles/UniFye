@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:unifye/pages/message_page.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart'; // ← ConversationsPage
 import 'package:unifye/pages/profile_plan_page.dart' show ProfilePage;
 import 'package:unifye/pages/swipe-page.dart';
 
@@ -11,6 +10,7 @@ import '../features/subscription/providers/subscription_provider.dart';
 import '../widgets/app_button.dart';
 import '../widgets/app_top_bar.dart' hide ProfilePage;
 import 'change_plan_page.dart';
+import 'conversation_page.dart';
 
 // ─── Tab Definitions ──────────────────────────────────────────────────────────
 
@@ -135,26 +135,16 @@ class _TabNavigator extends StatelessWidget {
       case AppTab.events:
         return const _EventsPlaceholderPage();
 
+    // ── Messages: show the conversations list, not an individual chat ──
       case AppTab.messages:
         return authState.when(
           unauthenticated: () => const Scaffold(
-            body: Center(
-              child: Text('Please login'),
-            ),
+            body: Center(child: Text('Please login')),
           ),
-
           loading: () => const Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(),
-            ),
+            body: Center(child: CircularProgressIndicator()),
           ),
-
-          authenticated: (user, token) {
-            return MessagePage(
-              userName: user.name,
-              imageUrl: user.photoUrl,
-            );
-          },
+          authenticated: (user, token) => const ConversationsPage(),
         );
 
       case AppTab.profile:
@@ -256,8 +246,9 @@ class _NavItem extends StatelessWidget {
                   child: Icon(
                     isActive ? tab.activeIcon : tab.inactiveIcon,
                     key: ValueKey(isActive),
-                    color:
-                    isActive ? AppColors.primary : AppColors.textTertiary,
+                    color: isActive
+                        ? AppColors.primary
+                        : AppColors.textTertiary,
                     size: 24,
                   ),
                 ),
@@ -281,8 +272,10 @@ class _NavItem extends StatelessWidget {
               duration: const Duration(milliseconds: 200),
               style: TextStyle(
                 fontSize: 11,
-                fontWeight: isActive ? FontWeight.w700 : FontWeight.w400,
-                color: isActive ? AppColors.primary : AppColors.textTertiary,
+                fontWeight:
+                isActive ? FontWeight.w700 : FontWeight.w400,
+                color:
+                isActive ? AppColors.primary : AppColors.textTertiary,
               ),
               child: Text(tab.label),
             ),
@@ -325,7 +318,8 @@ class PlanUpgradeBanner extends ConsumerWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.rocket_launch_rounded, color: Colors.white, size: 28),
+          const Icon(Icons.rocket_launch_rounded,
+              color: Colors.white, size: 28),
           const SizedBox(width: 12),
           const Expanded(
             child: Column(
@@ -422,7 +416,8 @@ class _SubscriptionInfoTile extends ConsumerWidget {
               ],
             ),
           ),
-          const Icon(Icons.chevron_right_rounded, color: AppColors.textTertiary),
+          const Icon(Icons.chevron_right_rounded,
+              color: AppColors.textTertiary),
         ],
       ),
     );
@@ -435,10 +430,6 @@ class _SubscriptionInfoTile extends ConsumerWidget {
 }
 
 // ─── Placeholder Pages ────────────────────────────────────────────────────────
-// NOTE: Once these become real feature pages, move each one to its own file:
-//   features/events/pages/events_page.dart
-//   features/messages/pages/messages_page.dart
-//   features/profile/pages/profile_page.dart
 
 // ─── Events Page ──────────────────────────────────────────────────────────────
 
@@ -455,19 +446,15 @@ class _EventsPlaceholderPageState
   @override
   void initState() {
     super.initState();
-    // Load events data when this tab is first mounted
     _onTabActive();
   }
 
   void _onTabActive() {
-    // TODO: Replace with actual events load when the provider exists
-    // e.g. ref.read(eventsProvider.notifier).loadEvents();
     debugPrint('[EventsPage] Tab became active — loading events');
   }
 
   @override
   Widget build(BuildContext context) {
-    // Listen for when this tab becomes active again after switching away
     ref.listen<AppTab>(activeTabProvider, (previous, next) {
       if (next == AppTab.events && previous != AppTab.events) {
         _onTabActive();
@@ -475,7 +462,8 @@ class _EventsPlaceholderPageState
     });
 
     final mySubscription = ref.watch(mySubscriptionProvider);
-    final canCreate = mySubscription?.permissions.canCreateEvents ?? false;
+    final canCreate =
+        mySubscription?.permissions.canCreateEvents ?? false;
 
     return Scaffold(
       appBar: AppBar(
@@ -498,7 +486,8 @@ class _EventsPlaceholderPageState
             const SizedBox(height: 16),
             const Text(
               'Events coming soon!',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              style: TextStyle(
+                  fontSize: 18, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 8),
             const Text(
@@ -509,205 +498,14 @@ class _EventsPlaceholderPageState
               const SizedBox(height: 24),
               AppButton(
                 onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const ChangePlanPage()),
+                  MaterialPageRoute(
+                      builder: (_) => const ChangePlanPage()),
                 ),
                 text: 'Create Events — Upgrade to Pro',
                 type: AppButtonType.outline,
                 icon: Icons.lock_open_rounded,
               ),
             ],
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Messages Page ────────────────────────────────────────────────────────────
-
-class _MessagesPlaceholderPage extends ConsumerStatefulWidget {
-  const _MessagesPlaceholderPage();
-
-  @override
-  ConsumerState<_MessagesPlaceholderPage> createState() =>
-      _MessagesPlaceholderPageState();
-}
-
-class _MessagesPlaceholderPageState
-    extends ConsumerState<_MessagesPlaceholderPage> {
-  @override
-  void initState() {
-    super.initState();
-    // Load conversations when this tab is first mounted
-    _onTabActive();
-  }
-
-  void _onTabActive() {
-    // TODO: Replace with actual messages load when the provider exists
-    // e.g. ref.read(conversationsProvider.notifier).loadConversations();
-    debugPrint('[MessagesPage] Tab became active — loading conversations');
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // Listen for when this tab becomes active again after switching away
-    ref.listen<AppTab>(activeTabProvider, (previous, next) {
-      if (next == AppTab.messages && previous != AppTab.messages) {
-        _onTabActive();
-      }
-    });
-
-    return Scaffold(
-      appBar: AppBar(title: const Text('Messages')),
-      body: const Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.chat_bubble_rounded,
-                size: 64, color: AppColors.secondary),
-            SizedBox(height: 16),
-            Text(
-              'Messages coming soon!',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-            ),
-            SizedBox(height: 8),
-            Text(
-              'Chat with your matches here',
-              style: TextStyle(color: AppColors.textSecondary),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Profile Page ─────────────────────────────────────────────────────────────
-
-class _ProfilePlaceholderPage extends ConsumerStatefulWidget {
-  const _ProfilePlaceholderPage();
-
-  @override
-  ConsumerState<_ProfilePlaceholderPage> createState() =>
-      _ProfilePlaceholderPageState();
-}
-
-class _ProfilePlaceholderPageState
-    extends ConsumerState<_ProfilePlaceholderPage> {
-  @override
-  void initState() {
-    super.initState();
-    // Load profile data when this tab is first mounted
-    _onTabActive();
-  }
-
-  void _onTabActive() {
-    // TODO: Refresh profile/user data when returning to this tab
-    // e.g. ref.read(authProvider.notifier).refreshUser();
-    debugPrint('[ProfilePage] Tab became active — refreshing profile');
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    // Listen for when this tab becomes active again after switching away
-    ref.listen<AppTab>(activeTabProvider, (previous, next) {
-      if (next == AppTab.profile && previous != AppTab.profile) {
-        _onTabActive();
-      }
-    });
-
-    final authState = ref.watch(authProvider);
-
-    return authState.when(
-      unauthenticated: () => const SizedBox.shrink(),
-      loading: () => const Center(child: CircularProgressIndicator()),
-      authenticated: (user, token) => Scaffold(
-        appBar: AppBar(
-          title: const Text('Profile'),
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.settings_outlined),
-              onPressed: () {},
-            ),
-          ],
-        ),
-        body: ListView(
-          children: [
-            // Profile header
-            Padding(
-              padding: const EdgeInsets.all(24),
-              child: Column(
-                children: [
-                  CircleAvatar(
-                    radius: 44,
-                    backgroundColor: AppColors.secondary,
-                    backgroundImage: user.photoUrl != null
-                        ? NetworkImage(user.photoUrl!)
-                        : null,
-                    child: user.photoUrl == null
-                        ? Text(
-                      user.name.isNotEmpty
-                          ? user.name[0].toUpperCase()
-                          : '?',
-                      style: const TextStyle(
-                        fontSize: 32,
-                        color: AppColors.primary,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    )
-                        : null,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    user.name,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    user.email,
-                    style: const TextStyle(color: AppColors.textSecondary),
-                  ),
-                ],
-              ),
-            ),
-
-            const PlanUpgradeBanner(),
-            const _SubscriptionInfoTile(),
-
-            const Divider(height: 32),
-
-            // Change plan
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: AppButton(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const ChangePlanPage()),
-                ),
-                text: 'Change Plan',
-                type: AppButtonType.primary,
-                icon: Icons.workspace_premium_rounded,
-                isFullWidth: true,
-              ),
-            ),
-
-            const SizedBox(height: 12),
-
-            // Sign out
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: AppButton(
-                onPressed: () => ref.read(authProvider.notifier).logout(),
-                text: 'Sign Out',
-                type: AppButtonType.outline,
-                icon: Icons.logout_rounded,
-                isFullWidth: true,
-              ),
-            ),
-
-            const SizedBox(height: 32),
           ],
         ),
       ),
