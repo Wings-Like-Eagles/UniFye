@@ -30,7 +30,9 @@ public class ProfileService(
         return AuthServiceResult<UserResponse>.Ok(ToResponse(user));
     }
 
-    public async Task<AuthServiceResult<UserResponse>> UpdateProfileAsync(Guid userId, ProfileUpdateRequest request, CancellationToken cancellationToken)
+    // Notes are made in the update Profile.
+
+    public async Task<AuthServiceResult<UserResponse>> UpdateProfileAsync(Guid userId, UpdateProfileRequest request, CancellationToken cancellationToken)
     {
         var user = await FindUserAsync(userId, cancellationToken);
         if (user is null)
@@ -39,6 +41,8 @@ public class ProfileService(
         }
 
         var profile = user.Profile;
+
+        // This just makes sure that the user does not include white spaces in their request. We can maybe remove this entirely by just creating validations at the front end. 
 
         if (!string.IsNullOrWhiteSpace(request.FirstName))
         {
@@ -80,6 +84,8 @@ public class ProfileService(
                 profile.Interests.Add(new UserInterest { Interest = interest });
             }
         }
+
+        // Please check the update function properly. Looking at the if statement if the interest is not null. What happens when the interest is null. Does it keep the other intersest still.
 
         await dbContext.SaveChangesAsync(cancellationToken);
 

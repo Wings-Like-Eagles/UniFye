@@ -6,6 +6,7 @@ import 'package:unifye/widgets/app_text_field.dart';
 import 'package:unifye/actions/login_actions.dart';
 import 'package:unifye/features/auth/providers/auth_provider.dart';
 import 'package:unifye/features/auth/models/auth_state.dart';
+import 'forgot_password_page.dart';
 import 'register-page.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
@@ -304,14 +305,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   }
 
   void _handleForgotPassword() {
-    // TODO: Navigate to forgot password screen
-    _showInfoMessage('Forgot password feature coming soon!');
-    
-    // Navigator.push(
-    //   context,
-    //   MaterialPageRoute(builder: (context) => const ForgotPasswordScreen()),
-    // );
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const ForgotPasswordPage()),
+    );
   }
+
 
   void _handleGoogleSignIn() {
     // TODO: Implement Google Sign In
