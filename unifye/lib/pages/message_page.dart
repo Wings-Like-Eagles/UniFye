@@ -3,43 +3,15 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:unifye/core/theme/app_colour.dart';
 
-// ─────────────────────────────────────────────────────────────
-// Model
-// ─────────────────────────────────────────────────────────────
-
-enum MessageStatus { sending, sent, delivered, read }
-
-class ChatMessage {
-  final String id;
-  final String message;
-  final bool isMine;
-  final DateTime sentAt;
-  final MessageStatus status;
-
-  ChatMessage({
-    required this.id,
-    required this.message,
-    required this.isMine,
-    required this.sentAt,
-    this.status = MessageStatus.sent,
-  });
-
-  ChatMessage copyWith({MessageStatus? status}) {
-    return ChatMessage(
-      id: id,
-      message: message,
-      isMine: isMine,
-      sentAt: sentAt,
-      status: status ?? this.status,
-    );
-  }
-}
+import '../features/messages/models/chat_model.dart';
+import '../features/messages/providers/message_provider.dart';
 
 // ─────────────────────────────────────────────────────────────
 // Page
 // ─────────────────────────────────────────────────────────────
 
 class MessagePage extends ConsumerStatefulWidget {
+  final String currentUserId; // <-- Added: needed to derive isMine
   final String userId;
   final String userName;
   final String? imageUrl;
@@ -47,6 +19,7 @@ class MessagePage extends ConsumerStatefulWidget {
 
   const MessagePage({
     super.key,
+    required this.currentUserId,
     required this.userId,
     required this.userName,
     this.imageUrl,
@@ -67,40 +40,16 @@ class _MessagePageState extends ConsumerState<MessagePage>
 
   late final AnimationController _sendBtnController;
 
-  final List<ChatMessage> _messages = [
-    ChatMessage(
-      id: '1',
-      message: 'Hey 👋',
-      isMine: false,
-      sentAt: DateTime.now().subtract(const Duration(minutes: 12)),
-      status: MessageStatus.read,
-    ),
-    ChatMessage(
-      id: '2',
-      message: 'Hi there! How\'s it going? 😊',
-      isMine: true,
-      sentAt: DateTime.now().subtract(const Duration(minutes: 10)),
-      status: MessageStatus.read,
-    ),
-    ChatMessage(
-      id: '3',
-      message: 'How are you doing?',
-      isMine: false,
-      sentAt: DateTime.now().subtract(const Duration(minutes: 8)),
-      status: MessageStatus.read,
-    ),
-    ChatMessage(
-      id: '4',
-      message: 'Doing great, thanks for asking! Any plans this weekend?',
-      isMine: true,
-      sentAt: DateTime.now().subtract(const Duration(minutes: 5)),
-      status: MessageStatus.delivered,
-    ),
-  ];
+  // Fix: removed `final` so the list can be reassigned in setState
+  List<ChatMessage> _messages = [];
+  bool _isLoading = true;
+  bool _isSending = false;
 
   @override
   void initState() {
     super.initState();
+
+    _loadMessages();
 
     _sendBtnController = AnimationController(
       vsync: this,
@@ -130,6 +79,14 @@ class _MessagePageState extends ConsumerState<MessagePage>
   }
 
   // ─────────────────────────────────────────────────────────────
+  // Helpers
+  // ─────────────────────────────────────────────────────────────
+
+  /// Derives whether a message belongs to the current user.
+  bool _isMine(ChatMessage message) =>
+      message.senderId == widget.currentUserId;
+
+  // ─────────────────────────────────────────────────────────────
   // Build
   // ─────────────────────────────────────────────────────────────
 
@@ -148,6 +105,41 @@ class _MessagePageState extends ConsumerState<MessagePage>
         ],
       ),
     );
+  }
+
+  Future<void> _loadMessages() async {
+    try {
+      final repository = ref.read(messageRepositoryProvider);
+
+      final messages = await repository.getMessages(
+        otherUserId: widget.userId,
+      );
+
+      setState(() {
+        _messages = messages;
+        _isLoading = false;
+      });
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _scrollToBottom();
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
 
   // ─── App Bar ──────────────────────────────────────────────
@@ -178,9 +170,9 @@ class _MessagePageState extends ConsumerState<MessagePage>
               // Avatar with gradient ring when online
               Container(
                 decoration: widget.isOnline
-                    ? BoxDecoration(
+                    ? const BoxDecoration(
                   shape: BoxShape.circle,
-                  gradient: const LinearGradient(
+                  gradient: LinearGradient(
                     colors: [
                       AppColors.primary,
                       AppColors.secondary,
@@ -270,6 +262,19 @@ class _MessagePageState extends ConsumerState<MessagePage>
   // ─── Message List ─────────────────────────────────────────
 
   Widget _buildMessageList() {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    if (_messages.isEmpty) {
+      return const Center(
+        child: Text(
+          'No messages yet',
+          style: TextStyle(color: AppColors.textSecondary),
+        ),
+      );
+    }
+
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(),
       child: ListView.builder(
@@ -283,17 +288,19 @@ class _MessagePageState extends ConsumerState<MessagePage>
               ? _messages[index + 1]
               : null;
 
+          // Fix: use sentAtUtc instead of sentAt
           final showTimestamp = prev == null ||
-              message.sentAt
-                  .difference(prev.sentAt)
+              message.sentAtUtc
+                  .difference(prev.sentAtUtc)
                   .inMinutes
                   .abs() >
                   10;
 
+          // Fix: derive isMine via senderId comparison
           final isGroupedWithNext = next != null &&
-              next.isMine == message.isMine &&
-              message.sentAt
-                  .difference(next.sentAt)
+              _isMine(next) == _isMine(message) &&
+              message.sentAtUtc
+                  .difference(next.sentAtUtc)
                   .inMinutes
                   .abs() <=
                   10;
@@ -301,7 +308,7 @@ class _MessagePageState extends ConsumerState<MessagePage>
           return Column(
             children: [
               if (showTimestamp)
-                _buildTimestampDivider(message.sentAt),
+                _buildTimestampDivider(message.sentAtUtc),
               _buildMessageBubble(
                 message,
                 groupedWithNext: isGroupedWithNext,
@@ -367,7 +374,8 @@ class _MessagePageState extends ConsumerState<MessagePage>
       ChatMessage message, {
         required bool groupedWithNext,
       }) {
-    final isMine = message.isMine;
+    // Fix: derive isMine locally
+    final isMine = _isMine(message);
 
     const r18 = Radius.circular(18);
     const r4 = Radius.circular(4);
@@ -380,8 +388,7 @@ class _MessagePageState extends ConsumerState<MessagePage>
     );
 
     return Align(
-      alignment:
-      isMine ? Alignment.centerRight : Alignment.centerLeft,
+      alignment: isMine ? Alignment.centerRight : Alignment.centerLeft,
       child: GestureDetector(
         onLongPress: () => _onMessageLongPress(message),
         child: Container(
@@ -397,17 +404,13 @@ class _MessagePageState extends ConsumerState<MessagePage>
           decoration: BoxDecoration(
             gradient: isMine
                 ? const LinearGradient(
-              colors: [
-                AppColors.primary,
-                AppColors.secondary,
-              ],
+              colors: [AppColors.primary, AppColors.secondary],
             )
                 : null,
             color: isMine ? null : AppColors.surface,
             borderRadius: borderRadius,
-            border: isMine
-                ? null
-                : Border.all(color: AppColors.border),
+            border:
+            isMine ? null : Border.all(color: AppColors.border),
             boxShadow: [
               BoxShadow(
                 color: isMine
@@ -423,13 +426,13 @@ class _MessagePageState extends ConsumerState<MessagePage>
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                message.message,
+                // Fix: use content instead of message
+                message.content,
                 style: TextStyle(
                   fontSize: 14,
                   height: 1.45,
-                  color: isMine
-                      ? Colors.white
-                      : AppColors.textPrimary,
+                  color:
+                  isMine ? Colors.white : AppColors.textPrimary,
                 ),
               ),
               const SizedBox(height: 4),
@@ -437,7 +440,8 @@ class _MessagePageState extends ConsumerState<MessagePage>
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   Text(
-                    _formatTime(message.sentAt),
+                    // Fix: use sentAtUtc instead of sentAt
+                    _formatTime(message.sentAtUtc),
                     style: TextStyle(
                       fontSize: 10,
                       color: isMine
@@ -445,9 +449,15 @@ class _MessagePageState extends ConsumerState<MessagePage>
                           : AppColors.textSecondary,
                     ),
                   ),
+                  // Fix: MessageStatus removed — model has no status field.
+                  // Show a static sent indicator for own messages only.
                   if (isMine) ...[
                     const SizedBox(width: 4),
-                    _buildStatusIcon(message.status),
+                    const Icon(
+                      Icons.done_all_rounded,
+                      size: 13,
+                      color: Colors.white60,
+                    ),
                   ],
                 ],
               ),
@@ -456,40 +466,6 @@ class _MessagePageState extends ConsumerState<MessagePage>
         ),
       ),
     );
-  }
-
-  // ─── Status Icon ──────────────────────────────────────────
-
-  Widget _buildStatusIcon(MessageStatus status) {
-    switch (status) {
-      case MessageStatus.sending:
-        return const SizedBox(
-          width: 12,
-          height: 12,
-          child: CircularProgressIndicator(
-            strokeWidth: 1.5,
-            color: Colors.white60,
-          ),
-        );
-      case MessageStatus.sent:
-        return const Icon(
-          Icons.check_rounded,
-          size: 13,
-          color: Colors.white60,
-        );
-      case MessageStatus.delivered:
-        return const Icon(
-          Icons.done_all_rounded,
-          size: 13,
-          color: Colors.white60,
-        );
-      case MessageStatus.read:
-        return const Icon(
-          Icons.done_all_rounded,
-          size: 13,
-          color: Colors.white,
-        );
-    }
   }
 
   // ─── Input Bar ────────────────────────────────────────────
@@ -508,15 +484,11 @@ class _MessagePageState extends ConsumerState<MessagePage>
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
-            // Attach button
             _InputIconButton(
               icon: Icons.add_rounded,
               onTap: () {},
             ),
-
             const SizedBox(width: 8),
-
-            // Text field
             Expanded(
               child: Container(
                 constraints: const BoxConstraints(minHeight: 44),
@@ -547,9 +519,8 @@ class _MessagePageState extends ConsumerState<MessagePage>
                             fontSize: 14,
                           ),
                           border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(
-                            vertical: 12,
-                          ),
+                          contentPadding:
+                          EdgeInsets.symmetric(vertical: 12),
                           isCollapsed: false,
                         ),
                       ),
@@ -558,17 +529,13 @@ class _MessagePageState extends ConsumerState<MessagePage>
                       _InputIconButton(
                         icon: Icons.mic_none_rounded,
                         onTap: () {},
-                        padding:
-                        const EdgeInsets.only(right: 4),
+                        padding: const EdgeInsets.only(right: 4),
                       ),
                   ],
                 ),
               ),
             ),
-
             const SizedBox(width: 8),
-
-            // Send / Mic toggle
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 200),
               transitionBuilder: (child, animation) =>
@@ -594,55 +561,30 @@ class _MessagePageState extends ConsumerState<MessagePage>
   // Actions
   // ─────────────────────────────────────────────────────────────
 
-  void _sendMessage() {
+  Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
-    if (text.isEmpty) return;
+    if (text.isEmpty || _isSending) return;
 
-    final newMessage = ChatMessage(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
-      message: text,
-      isMine: true,
-      sentAt: DateTime.now(),
-      status: MessageStatus.sending,
-    );
+    setState(() => _isSending = true);
 
-    setState(() => _messages.add(newMessage));
-    _messageController.clear();
+    try {
+      final repository = ref.read(messageRepositoryProvider);
 
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      }
-    });
+      final message = await repository.sendMessage(
+        receiverId: widget.userId,
+        message: text,
+      );
 
-    // Simulate status progression
-    Future.delayed(const Duration(milliseconds: 800), () {
-      if (!mounted) return;
-      setState(() {
-        final idx =
-        _messages.indexWhere((m) => m.id == newMessage.id);
-        if (idx != -1) {
-          _messages[idx] =
-              _messages[idx].copyWith(status: MessageStatus.sent);
-        }
-      });
-    });
-
-    Future.delayed(const Duration(seconds: 2), () {
-      if (!mounted) return;
-      setState(() {
-        final idx =
-        _messages.indexWhere((m) => m.id == newMessage.id);
-        if (idx != -1) {
-          _messages[idx] = _messages[idx]
-              .copyWith(status: MessageStatus.delivered);
-        }
-      });
-    });
+      setState(() => _messages.add(message));
+      _messageController.clear();
+      _scrollToBottom();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Failed to send message')),
+      );
+    } finally {
+      setState(() => _isSending = false);
+    }
   }
 
   void _onMessageLongPress(ChatMessage message) {
@@ -651,10 +593,12 @@ class _MessagePageState extends ConsumerState<MessagePage>
       context: context,
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius:
-        BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) => _MessageOptionsSheet(message: message),
+      builder: (_) => _MessageOptionsSheet(
+        message: message,
+        isMine: _isMine(message),
+      ),
     );
   }
 
@@ -663,30 +607,29 @@ class _MessagePageState extends ConsumerState<MessagePage>
       context: context,
       backgroundColor: AppColors.surface,
       shape: const RoundedRectangleBorder(
-        borderRadius:
-        BorderRadius.vertical(top: Radius.circular(20)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (_) =>
-          _ChatOptionsSheet(userName: widget.userName),
+      builder: (_) => _ChatOptionsSheet(userName: widget.userName),
     );
   }
 
   // ─────────────────────────────────────────────────────────────
-  // Helpers
+  // Formatters
   // ─────────────────────────────────────────────────────────────
 
   String _formatTime(DateTime date) {
-    final h = date.hour.toString().padLeft(2, '0');
-    final m = date.minute.toString().padLeft(2, '0');
+    final h = date.toLocal().hour.toString().padLeft(2, '0');
+    final m = date.toLocal().minute.toString().padLeft(2, '0');
     return '$h:$m';
   }
 
   String _formatFullTime(DateTime date) {
+    final local = date.toLocal();
     final now = DateTime.now();
-    final diff = now.difference(date);
+    final diff = now.difference(local);
     if (diff.inDays == 0) return 'Today ${_formatTime(date)}';
     if (diff.inDays == 1) return 'Yesterday ${_formatTime(date)}';
-    return '${date.day}/${date.month}/${date.year} ${_formatTime(date)}';
+    return '${local.day}/${local.month}/${local.year} ${_formatTime(date)}';
   }
 }
 
@@ -755,8 +698,7 @@ class _InputIconButton extends StatelessWidget {
           width: 44,
           height: 44,
           child: Center(
-            child: Icon(icon,
-                color: AppColors.textSecondary, size: 22),
+            child: Icon(icon, color: AppColors.textSecondary, size: 22),
           ),
         ),
       ),
@@ -770,8 +712,13 @@ class _InputIconButton extends StatelessWidget {
 
 class _MessageOptionsSheet extends StatelessWidget {
   final ChatMessage message;
+  // Fix: isMine passed in since the sheet has no access to currentUserId
+  final bool isMine;
 
-  const _MessageOptionsSheet({required this.message});
+  const _MessageOptionsSheet({
+    required this.message,
+    required this.isMine,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -793,8 +740,8 @@ class _MessageOptionsSheet extends StatelessWidget {
             icon: Icons.copy_rounded,
             label: 'Copy',
             onTap: () {
-              Clipboard.setData(
-                  ClipboardData(text: message.message));
+              // Fix: use content instead of message
+              Clipboard.setData(ClipboardData(text: message.content));
               Navigator.pop(context);
             },
           ),
@@ -803,7 +750,8 @@ class _MessageOptionsSheet extends StatelessWidget {
             label: 'Reply',
             onTap: () => Navigator.pop(context),
           ),
-          if (message.isMine)
+          // Fix: use passed isMine instead of message.isMine
+          if (isMine)
             _SheetTile(
               icon: Icons.delete_outline_rounded,
               label: 'Delete',

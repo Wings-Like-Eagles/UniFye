@@ -1,24 +1,27 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart'; // ← ConversationsPage
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:unifye/core/theme/app_colour.dart';
+import 'package:unifye/features/auth/providers/auth_provider.dart';
+import 'package:unifye/features/subscription/models/subscription_plan.dart';
+import 'package:unifye/features/subscription/providers/subscription_provider.dart';
+import 'package:unifye/pages/change_plan_page.dart';
+import 'package:unifye/pages/conversation_page.dart'; // ← real EventsPage
 import 'package:unifye/pages/profile_plan_page.dart' show ProfilePage;
 import 'package:unifye/pages/swipe-page.dart';
+import 'package:unifye/widgets/app_button.dart';
+import 'package:unifye/widgets/app_top_bar.dart' hide ProfilePage;
 
-import '../core/theme/app_colour.dart';
-import '../features/auth/providers/auth_provider.dart';
-import '../features/subscription/models/subscription_plan.dart';
-import '../features/subscription/providers/subscription_provider.dart';
-import '../widgets/app_button.dart';
-import '../widgets/app_top_bar.dart' hide ProfilePage;
-import 'change_plan_page.dart';
-import 'conversation_page.dart';
+import 'event_page.dart';
 
-// ─── Tab Definitions ──────────────────────────────────────────────────────────
+// =============================================================================
+// Tab Definitions
+// =============================================================================
 
 enum AppTab {
-  discover('Discover', Icons.explore_rounded, Icons.explore_outlined),
-  events('Events', Icons.event_rounded, Icons.event_outlined),
-  messages('Messages', Icons.chat_bubble_rounded, Icons.chat_bubble_outline),
-  profile('Profile', Icons.person_rounded, Icons.person_outlined);
+  discover('Discover', Icons.explore_rounded,      Icons.explore_outlined),
+  events  ('Events',   Icons.event_rounded,         Icons.event_outlined),
+  messages('Messages', Icons.chat_bubble_rounded,   Icons.chat_bubble_outline),
+  profile ('Profile',  Icons.person_rounded,        Icons.person_outlined);
 
   final String label;
   final IconData activeIcon;
@@ -27,11 +30,15 @@ enum AppTab {
   const AppTab(this.label, this.activeIcon, this.inactiveIcon);
 }
 
-// ─── Layout Provider ──────────────────────────────────────────────────────────
+// =============================================================================
+// Layout Provider
+// =============================================================================
 
 final activeTabProvider = StateProvider<AppTab>((ref) => AppTab.discover);
 
-// ─── Layout Page ──────────────────────────────────────────────────────────────
+// =============================================================================
+// Layout Page
+// =============================================================================
 
 class LayoutPage extends ConsumerStatefulWidget {
   const LayoutPage({super.key});
@@ -41,7 +48,7 @@ class LayoutPage extends ConsumerStatefulWidget {
 }
 
 class _LayoutPageState extends ConsumerState<LayoutPage> {
-  // Each tab gets its own navigator key to preserve page state on tab switch
+  // Each tab gets its own navigator key to preserve page state across tab switches
   final Map<AppTab, GlobalKey<NavigatorState>> _navigatorKeys = {
     for (final tab in AppTab.values) tab: GlobalKey<NavigatorState>(),
   };
@@ -57,12 +64,12 @@ class _LayoutPageState extends ConsumerState<LayoutPage> {
 
   @override
   Widget build(BuildContext context) {
-    final activeTab = ref.watch(activeTabProvider);
+    final activeTab      = ref.watch(activeTabProvider);
     final mySubscription = ref.watch(mySubscriptionProvider);
 
     return PopScope(
       canPop: false,
-      onPopInvokedWithResult: (didPop, result) {
+      onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
         final navigatorKey = _navigatorKeys[activeTab]!;
         if (navigatorKey.currentState?.canPop() == true) {
@@ -91,6 +98,7 @@ class _LayoutPageState extends ConsumerState<LayoutPage> {
           onTabSelected: (tab) {
             final currentTab = ref.read(activeTabProvider);
             if (currentTab == tab) {
+              // Double-tap on active tab: pop to root
               _navigatorKeys[tab]?.currentState?.popUntil((r) => r.isFirst);
             } else {
               ref.read(activeTabProvider.notifier).state = tab;
@@ -102,7 +110,9 @@ class _LayoutPageState extends ConsumerState<LayoutPage> {
   }
 }
 
-// ─── Tab Navigator ────────────────────────────────────────────────────────────
+// =============================================================================
+// Tab Navigator
+// =============================================================================
 
 class _TabNavigator extends StatelessWidget {
   final GlobalKey<NavigatorState> navigatorKey;
@@ -116,16 +126,14 @@ class _TabNavigator extends StatelessWidget {
       key: navigatorKey,
       onGenerateRoute: (settings) => MaterialPageRoute(
         settings: settings,
-        builder: (context) => Consumer(
-          builder: (context, ref, _) {
-            return _buildTabRoot(context, ref, tab);
-          },
+        builder: (_) => Consumer(
+          builder: (ctx, ref, _) => _buildTabRoot(ctx, ref),
         ),
       ),
     );
   }
 
-  Widget _buildTabRoot(BuildContext context, WidgetRef ref, AppTab tab) {
+  Widget _buildTabRoot(BuildContext context, WidgetRef ref) {
     final authState = ref.watch(authProvider);
 
     switch (tab) {
@@ -133,9 +141,9 @@ class _TabNavigator extends StatelessWidget {
         return const SwipePage();
 
       case AppTab.events:
-        return const _EventsPlaceholderPage();
+      // Real EventsPage — no more placeholder
+        return const EventsPage();
 
-    // ── Messages: show the conversations list, not an individual chat ──
       case AppTab.messages:
         return authState.when(
           unauthenticated: () => const Scaffold(
@@ -144,7 +152,7 @@ class _TabNavigator extends StatelessWidget {
           loading: () => const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           ),
-          authenticated: (user, token) => const ConversationsPage(),
+          authenticated: (user, token) => ConversationsPage(currentUserId: user.id,),
         );
 
       case AppTab.profile:
@@ -153,7 +161,9 @@ class _TabNavigator extends StatelessWidget {
   }
 }
 
-// ─── Bottom Navigation Bar ────────────────────────────────────────────────────
+// =============================================================================
+// Bottom Navigation Bar
+// =============================================================================
 
 class _UniFyeBottomNavBar extends ConsumerWidget {
   final AppTab activeTab;
@@ -188,6 +198,7 @@ class _UniFyeBottomNavBar extends ConsumerWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: AppTab.values.map((tab) {
+              // Show a dot on the Events tab if the user is on a free plan
               final showBadge = tab == AppTab.events &&
                   (mySubscription == null || mySubscription!.isFree);
 
@@ -205,7 +216,9 @@ class _UniFyeBottomNavBar extends ConsumerWidget {
   }
 }
 
-// ─── Nav Item ─────────────────────────────────────────────────────────────────
+// =============================================================================
+// Nav Item
+// =============================================================================
 
 class _NavItem extends StatelessWidget {
   final AppTab tab;
@@ -246,9 +259,7 @@ class _NavItem extends StatelessWidget {
                   child: Icon(
                     isActive ? tab.activeIcon : tab.inactiveIcon,
                     key: ValueKey(isActive),
-                    color: isActive
-                        ? AppColors.primary
-                        : AppColors.textTertiary,
+                    color: isActive ? AppColors.primary : AppColors.textTertiary,
                     size: 24,
                   ),
                 ),
@@ -272,10 +283,8 @@ class _NavItem extends StatelessWidget {
               duration: const Duration(milliseconds: 200),
               style: TextStyle(
                 fontSize: 11,
-                fontWeight:
-                isActive ? FontWeight.w700 : FontWeight.w400,
-                color:
-                isActive ? AppColors.primary : AppColors.textTertiary,
+                fontWeight: isActive ? FontWeight.w700 : FontWeight.w400,
+                color: isActive ? AppColors.primary : AppColors.textTertiary,
               ),
               child: Text(tab.label),
             ),
@@ -286,7 +295,9 @@ class _NavItem extends StatelessWidget {
   }
 }
 
-// ─── Plan Upgrade Banner ──────────────────────────────────────────────────────
+// =============================================================================
+// Plan Upgrade Banner  (used in other pages that need an inline promo strip)
+// =============================================================================
 
 class PlanUpgradeBanner extends ConsumerWidget {
   const PlanUpgradeBanner({super.key});
@@ -318,8 +329,7 @@ class PlanUpgradeBanner extends ConsumerWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.rocket_launch_rounded,
-              color: Colors.white, size: 28),
+          const Icon(Icons.rocket_launch_rounded, color: Colors.white, size: 28),
           const SizedBox(width: 12),
           const Expanded(
             child: Column(
@@ -356,69 +366,75 @@ class PlanUpgradeBanner extends ConsumerWidget {
   }
 }
 
-// ─── Subscription Info Tile ───────────────────────────────────────────────────
+// =============================================================================
+// Subscription Info Tile
+// =============================================================================
 
-class _SubscriptionInfoTile extends ConsumerWidget {
-  const _SubscriptionInfoTile();
+class SubscriptionInfoTile extends ConsumerWidget {
+  const SubscriptionInfoTile({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final sub = ref.watch(mySubscriptionProvider);
     if (sub == null) return const SizedBox.shrink();
 
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surfaceVariant,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.border),
+    return GestureDetector(
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => const ChangePlanPage()),
       ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
+      child: Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.surfaceVariant,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.workspace_premium_rounded,
+                color: AppColors.primary,
+              ),
             ),
-            child: const Icon(
-              Icons.workspace_premium_rounded,
-              color: AppColors.primary,
-            ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Current Plan: ${sub.tierDisplayName}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 14,
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Current Plan: ${sub.tierDisplayName}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  sub.isTrialing
-                      ? 'Trial ends ${_formatDate(sub.trialEnd)}'
-                      : sub.isFree
-                      ? 'Free plan — upgrade to unlock more'
-                      : sub.daysRemainingInPeriod != null
-                      ? '${sub.daysRemainingInPeriod} days remaining'
-                      : 'Active',
-                  style: const TextStyle(
-                    color: AppColors.textSecondary,
-                    fontSize: 12,
+                  const SizedBox(height: 2),
+                  Text(
+                    sub.isTrialing
+                        ? 'Trial ends ${_formatDate(sub.trialEnd)}'
+                        : sub.isFree
+                        ? 'Free plan — upgrade to unlock more'
+                        : sub.daysRemainingInPeriod != null
+                        ? '${sub.daysRemainingInPeriod} days remaining'
+                        : 'Active',
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 12,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const Icon(Icons.chevron_right_rounded,
-              color: AppColors.textTertiary),
-        ],
+            const Icon(Icons.chevron_right_rounded, color: AppColors.textTertiary),
+          ],
+        ),
       ),
     );
   }
@@ -426,89 +442,5 @@ class _SubscriptionInfoTile extends ConsumerWidget {
   String _formatDate(DateTime? date) {
     if (date == null) return '';
     return '${date.day}/${date.month}/${date.year}';
-  }
-}
-
-// ─── Placeholder Pages ────────────────────────────────────────────────────────
-
-// ─── Events Page ──────────────────────────────────────────────────────────────
-
-class _EventsPlaceholderPage extends ConsumerStatefulWidget {
-  const _EventsPlaceholderPage();
-
-  @override
-  ConsumerState<_EventsPlaceholderPage> createState() =>
-      _EventsPlaceholderPageState();
-}
-
-class _EventsPlaceholderPageState
-    extends ConsumerState<_EventsPlaceholderPage> {
-  @override
-  void initState() {
-    super.initState();
-    _onTabActive();
-  }
-
-  void _onTabActive() {
-    debugPrint('[EventsPage] Tab became active — loading events');
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    ref.listen<AppTab>(activeTabProvider, (previous, next) {
-      if (next == AppTab.events && previous != AppTab.events) {
-        _onTabActive();
-      }
-    });
-
-    final mySubscription = ref.watch(mySubscriptionProvider);
-    final canCreate =
-        mySubscription?.permissions.canCreateEvents ?? false;
-
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Events'),
-        actions: [
-          if (canCreate)
-            IconButton(
-              icon: const Icon(Icons.add_circle_outline_rounded),
-              tooltip: 'Create Event',
-              onPressed: () {},
-            ),
-        ],
-      ),
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.event_rounded,
-                size: 64, color: AppColors.secondary),
-            const SizedBox(height: 16),
-            const Text(
-              'Events coming soon!',
-              style: TextStyle(
-                  fontSize: 18, fontWeight: FontWeight.w700),
-            ),
-            const SizedBox(height: 8),
-            const Text(
-              'Browse and create campus events',
-              style: TextStyle(color: AppColors.textSecondary),
-            ),
-            if (!canCreate) ...[
-              const SizedBox(height: 24),
-              AppButton(
-                onPressed: () => Navigator.of(context).push(
-                  MaterialPageRoute(
-                      builder: (_) => const ChangePlanPage()),
-                ),
-                text: 'Create Events — Upgrade to Pro',
-                type: AppButtonType.outline,
-                icon: Icons.lock_open_rounded,
-              ),
-            ],
-          ],
-        ),
-      ),
-    );
   }
 }

@@ -80,7 +80,14 @@ final _mockConversations = [
 // ─────────────────────────────────────────────────────────────
 
 class ConversationsPage extends ConsumerStatefulWidget {
-  const ConversationsPage({super.key});
+  /// The ID of the currently authenticated user.
+  /// Pass this in from your auth provider when navigating to this page.
+  final String currentUserId;
+
+  const ConversationsPage({
+    super.key,
+    required this.currentUserId,
+  });
 
   @override
   ConsumerState<ConversationsPage> createState() =>
@@ -346,11 +353,10 @@ class _ConversationsPageState
       padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
       itemCount: list.length,
       separatorBuilder: (_, __) => const SizedBox(height: 4),
-      itemBuilder: (context, index) =>
-          _ConversationTile(
-            conversation: list[index],
-            onTap: () => _openChat(list[index]),
-          ),
+      itemBuilder: (context, index) => _ConversationTile(
+        conversation: list[index],
+        onTap: () => _openChat(list[index]),
+      ),
     );
   }
 
@@ -361,6 +367,9 @@ class _ConversationsPageState
       context,
       MaterialPageRoute(
         builder: (_) => MessagePage(
+          // Fix: currentUserId must be the logged-in user, not the
+          // chat partner. c.userId is always the OTHER person.
+          currentUserId: widget.currentUserId,
           userId: c.userId,
           userName: c.userName,
           imageUrl: c.imageUrl,
@@ -395,9 +404,9 @@ class _ConversationsPageState
 
     if (hasBorder) {
       return Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           shape: BoxShape.circle,
-          gradient: const LinearGradient(
+          gradient: LinearGradient(
             colors: [AppColors.primary, AppColors.secondary],
           ),
         ),
@@ -469,7 +478,6 @@ class _ConversationTile extends StatelessWidget {
           ),
           child: Row(
             children: [
-              // Avatar
               Stack(
                 children: [
                   CircleAvatar(
@@ -511,7 +519,6 @@ class _ConversationTile extends StatelessWidget {
 
               const SizedBox(width: 14),
 
-              // Content
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -569,9 +576,8 @@ class _ConversationTile extends StatelessWidget {
                         if (hasUnread) ...[
                           const SizedBox(width: 8),
                           Container(
-                            constraints: const BoxConstraints(
-                              minWidth: 20,
-                            ),
+                            constraints:
+                            const BoxConstraints(minWidth: 20),
                             height: 20,
                             padding: const EdgeInsets.symmetric(
                                 horizontal: 6),
@@ -646,8 +652,9 @@ class _GradientIconButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: AppColors.border),
         ),
-        child: const Icon(
-          Icons.edit_outlined,
+        // Fix: was hardcoded to Icons.edit_outlined, now uses the icon field
+        child: Icon(
+          icon,
           color: AppColors.textPrimary,
           size: 20,
         ),
