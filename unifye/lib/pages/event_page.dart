@@ -33,9 +33,11 @@ class EventsNotifier extends StateNotifier<AsyncValue<List<EventSummary>>> {
         headers: {'Authorization': 'Bearer $token'},
       );
       if (response.statusCode == 200) {
+        print('Events raw response: ${response.body}'); // ← add this
         final List<dynamic> json = jsonDecode(response.body);
         state = AsyncValue.data(json.map((e) => EventSummary.fromJson(e)).toList());
       } else {
+        print('Events fetch failed: ${response.statusCode} ${response.body}');
         state = AsyncValue.error('Failed to load events', StackTrace.current);
       }
     } catch (e, st) {

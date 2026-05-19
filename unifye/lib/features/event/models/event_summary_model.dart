@@ -34,9 +34,9 @@ class EventSummary {
       id: json['id'] as String,
       title: json['title'] as String,
       description: json['description'] as String?,
-      startsAtUtc: DateTime.parse(json['startsAtUtc'] as String),
-      endsAtUtc: json['endsAtUtc'] != null
-          ? DateTime.parse(json['endsAtUtc'] as String)
+      startsAtUtc: DateTime.parse(json['startsAt'] as String),   // was 'startsAtUtc'
+      endsAtUtc:   json['endsAt'] != null
+          ? DateTime.parse(json['endsAt'] as String) // was 'endsAtUtc'
           : null,
       locationName: json['locationName'] as String?,
       locationAddress: json['locationAddress'] as String?,
