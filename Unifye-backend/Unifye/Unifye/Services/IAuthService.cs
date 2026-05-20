@@ -4,7 +4,9 @@ namespace Unifye.Services;
 
 public interface IAuthService
 {
-    Task<AuthServiceResult<UserResponse>> LoginAsync(LoginRequest request, CancellationToken cancellationToken);
+    Task<AuthServiceResult<(UserResponse User, string Token)>> LoginAsync(
+    LoginRequest request,
+    CancellationToken cancellationToken);
 
     Task<AuthServiceResult<UserResponse>> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken);
 
