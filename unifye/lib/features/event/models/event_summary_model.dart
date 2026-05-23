@@ -12,6 +12,7 @@ class EventSummary {
   final String organiserName;
   final String? organiserImageUrl;
   final bool isAttending;
+  final String posterUrl;
 
   const EventSummary({
     required this.id,
@@ -27,6 +28,7 @@ class EventSummary {
     required this.organiserName,
     this.organiserImageUrl,
     required this.isAttending,
+    required this.posterUrl,
   });
 
   factory EventSummary.fromJson(Map<String, dynamic> json) {
@@ -46,6 +48,7 @@ class EventSummary {
       organiserName: json['organiserName'] as String,
       organiserImageUrl: json['organiserImageUrl'] as String?,
       isAttending: json['isAttending'] as bool,
+      posterUrl: json['posterUrl'] as String,
     );
   }
 

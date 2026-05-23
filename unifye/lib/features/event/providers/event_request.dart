@@ -6,6 +6,7 @@ class CreateEventRequest {
   final String? locationName;
   final String? locationAddress;
   final int? maxAttendees;
+  final String posterUrl;
 
   const CreateEventRequest({
     required this.title,
@@ -15,6 +16,7 @@ class CreateEventRequest {
     this.locationName,
     this.locationAddress,
     this.maxAttendees,
+    required this.posterUrl
   });
 
   Map<String, dynamic> toJson() => {
@@ -25,6 +27,7 @@ class CreateEventRequest {
     'locationName': locationName,
     'locationAddress': locationAddress,
     'maxAttendees': maxAttendees,
+    'posterUrl': posterUrl,
   };
 }
 
@@ -36,6 +39,7 @@ class UpdateEventRequest {
   final String? locationName;
   final String? locationAddress;
   final int? maxAttendees;
+  final String posterUrl;
 
   const UpdateEventRequest({
     required this.title,
@@ -45,6 +49,7 @@ class UpdateEventRequest {
     this.locationName,
     this.locationAddress,
     this.maxAttendees,
+    required this.posterUrl,
   });
 
   Map<String, dynamic> toJson() => {
@@ -55,6 +60,7 @@ class UpdateEventRequest {
     'locationName': locationName,
     'locationAddress': locationAddress,
     'maxAttendees': maxAttendees,
+    'posterUrl' : posterUrl,
   };
 }
 

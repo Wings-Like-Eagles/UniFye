@@ -1,4 +1,5 @@
 ﻿// Services/EventService.cs
+using Microsoft.AspNetCore.Http;
 using Unifye.DTOs;
 using Unifye.Models;
 using Unifye.Repositories;
@@ -7,9 +8,13 @@ namespace Unifye.Services;
 
 public class EventService(
     IEventRepository eventRepo,
+    IProfileImageService imageService,   // reuse the same image helper used by ProfileService
     ILogger<EventService> logger) : IEventService
 {
     private const int MaxMessageLength = 1000;
+    private const int MaxPosterBytes = 10 * 1024 * 1024;   // 10 MB
+    private static readonly string[] AllowedMimeTypes =
+        ["image/jpeg", "image/png", "image/webp"];
 
     // -------------------------------------------------------------------------
     // Queries
@@ -67,6 +72,7 @@ public class EventService(
             LocationLatitude = request.LocationLatitude,
             LocationLongitude = request.LocationLongitude,
             CreatedAtUtc = DateTime.UtcNow,
+            // PosterUrl is null until explicitly uploaded via POST /api/event/{id}/poster
         };
 
         ev.Attendees.Add(new EventAttendee
@@ -154,11 +160,68 @@ public class EventService(
             return AuthServiceResult<bool>.Fail(
                 StatusCodes.Status403Forbidden, "Only the organiser can delete this event.");
 
-        eventRepo.Delete(ev);                           // was missing — caused silent no-op
+        eventRepo.Delete(ev);
         await eventRepo.SaveChangesAsync(ct);
 
         logger.LogInformation("User {UserId} deleted event {EventId}", currentUserId, id);
         return AuthServiceResult<bool>.Ok(true);
+    }
+
+    // -------------------------------------------------------------------------
+    // Poster image upload
+    // -------------------------------------------------------------------------
+
+    public async Task<AuthServiceResult<EventDetailResponse>> UploadPosterAsync(
+        Guid id, Guid currentUserId, IFormFile poster, CancellationToken ct)
+    {
+        // 1. Load event
+        var ev = await eventRepo.GetByIdAsync(id, ct);
+        if (ev is null)
+            return AuthServiceResult<EventDetailResponse>.Fail(
+                StatusCodes.Status404NotFound, "Event not found.");
+
+        // 2. Only the organiser may upload/replace the poster
+        if (ev.OrganiserId != currentUserId)
+            return AuthServiceResult<EventDetailResponse>.Fail(
+                StatusCodes.Status403Forbidden, "Only the organiser can upload a poster.");
+
+        // 3. Validate file size
+        if (poster.Length > MaxPosterBytes)
+            return AuthServiceResult<EventDetailResponse>.Fail(
+                StatusCodes.Status400BadRequest, "Poster image must be under 10 MB.");
+
+        // 4. Validate MIME type
+        if (!AllowedMimeTypes.Contains(poster.ContentType.ToLowerInvariant()))
+            return AuthServiceResult<EventDetailResponse>.Fail(
+                StatusCodes.Status400BadRequest,
+                "Only JPEG, PNG, and WebP images are accepted.");
+
+        // 5. Save to storage (mirrors ProfileService.UpdateProfileImageAsync)
+        await using var stream = poster.OpenReadStream();
+
+        var uploadResult = await imageService.SaveImageAsync(
+            stream,
+            poster.ContentType,
+            $"events/{id}",
+            ct);
+
+        // Ensure upload succeeded
+        if (!uploadResult.Success || string.IsNullOrWhiteSpace(uploadResult.Data))
+        {
+            return AuthServiceResult<EventDetailResponse>.Fail(
+                uploadResult.StatusCode,
+                uploadResult.ErrorMessage ?? "Failed to upload poster image.");
+        }
+
+        // Persist URL on the event entity
+        ev.PosterUrl = uploadResult.Data;
+        await eventRepo.SaveChangesAsync(ct);
+
+        logger.LogInformation(
+            "User {UserId} uploaded poster for event {EventId}: {Path}",
+            currentUserId, id, uploadResult);
+
+        return AuthServiceResult<EventDetailResponse>.Ok(ToDetailResponse(ev, currentUserId));
     }
 
     // -------------------------------------------------------------------------
@@ -239,12 +302,7 @@ public class EventService(
                 StatusCodes.Status403Forbidden, "Only attendees can view the chat.");
 
         var messages = await eventRepo.GetChatMessagesAsync(eventId, page, pageSize, ct);
-
-        var result = messages
-            .Reverse()
-            .Select(ToChatMessageResponse)
-            .ToList();
-
+        var result = messages.Reverse().Select(ToChatMessageResponse).ToList();
         return AuthServiceResult<IReadOnlyList<EventChatMessageResponse>>.Ok(result);
     }
 
@@ -290,7 +348,7 @@ public class EventService(
     }
 
     // -------------------------------------------------------------------------
-    // Private mappers
+    // Mappers — PosterUrl now included in both summary and detail responses
     // -------------------------------------------------------------------------
 
     private static EventSummaryResponse ToSummaryResponse(Event ev, Guid currentUserId) => new()
@@ -311,6 +369,7 @@ public class EventService(
         OrganiserImageUrl = ev.Organiser?.Profile?.ImageUrl,
         IsAttending = ev.Attendees.Any(a => a.UserId == currentUserId),
         CreatedAt = ev.CreatedAtUtc,
+        PosterUrl = ev.PosterUrl,          // ← was missing before
     };
 
     private static EventDetailResponse ToDetailResponse(Event ev, Guid currentUserId) => new()
@@ -330,6 +389,7 @@ public class EventService(
         OrganiserImageUrl = ev.Organiser?.Profile?.ImageUrl,
         IsAttending = ev.Attendees.Any(a => a.UserId == currentUserId),
         CreatedAt = ev.CreatedAtUtc,
+        PosterUrl = ev.PosterUrl,          // ← was missing before
         Attendees = ev.Attendees.Select(a => new EventAttendeeResponse
         {
             UserId = a.UserId,
@@ -351,7 +411,6 @@ public class EventService(
         SentAt = m.SentAtUtc,
     };
 
-    // Fixed: nullable User, null-safe profile access
     private static string FullName(User? user) =>
         user?.Profile is null
             ? string.Empty
