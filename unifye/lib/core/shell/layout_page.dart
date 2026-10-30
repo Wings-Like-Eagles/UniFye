@@ -4,14 +4,12 @@ import 'package:unifye/core/theme/app_colour.dart';
 import 'package:unifye/features/auth/providers/auth_provider.dart';
 import 'package:unifye/features/subscription/models/subscription_plan.dart';
 import 'package:unifye/features/subscription/providers/subscription_provider.dart';
-import 'package:unifye/pages/change_plan_page.dart';
-import 'package:unifye/pages/conversation_page.dart'; // ← real EventsPage
-import 'package:unifye/pages/profile_plan_page.dart' show ProfilePage;
-import 'package:unifye/pages/swipe-page.dart';
-import 'package:unifye/widgets/app_button.dart';
-import 'package:unifye/widgets/app_top_bar.dart' hide ProfilePage;
-
-import 'event_page.dart';
+import 'package:unifye/core/widgets/app_button.dart';
+import 'package:unifye/features/event/pages/event_page.dart';
+import 'package:unifye/features/messages/pages/conversation_page.dart';
+import 'package:unifye/features/profile/pages/profile_plan_page.dart' show ProfilePage;
+import 'package:unifye/features/subscription/pages/change_plan_page.dart';
+import 'package:unifye/features/swipe/pages/swipe_page.dart';
 
 // =============================================================================
 // Tab Definitions

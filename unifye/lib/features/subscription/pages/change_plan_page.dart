@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:unifye/core/theme/app_colour.dart';
 import 'package:unifye/features/subscription/models/subscription_plan.dart';
 import 'package:unifye/features/subscription/providers/subscription_provider.dart';
-import 'package:unifye/widgets/app_button.dart';
+import 'package:unifye/core/widgets/app_button.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class ChangePlanPage extends ConsumerStatefulWidget {

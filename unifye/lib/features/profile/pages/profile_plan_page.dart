@@ -4,10 +4,10 @@ import 'package:unifye/core/theme/app_colour.dart';
 import 'package:unifye/features/auth/providers/auth_provider.dart';
 import 'package:unifye/features/subscription/models/subscription_plan.dart';
 import 'package:unifye/features/subscription/providers/subscription_provider.dart';
-import 'package:unifye/pages/change_plan_page.dart';
-import 'package:unifye/widgets/app_button.dart';
+import 'package:unifye/core/widgets/app_button.dart';
+import 'package:unifye/features/subscription/pages/change_plan_page.dart';
 
-import '../features/profile/providers/profile_provider.dart';
+import 'package:unifye/features/profile/providers/profile_provider.dart';
 import 'package:unifye/main.dart' show baseUrl;
 
 class ProfilePage extends ConsumerStatefulWidget {

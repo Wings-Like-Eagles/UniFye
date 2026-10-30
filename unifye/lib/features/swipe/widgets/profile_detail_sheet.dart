@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:unifye/features/swipe/models/swipe_candidate.dart';
-import 'package:unifye/widgets/app_button.dart';
-import '../../../core/theme/app_colour.dart';
+import 'package:unifye/core/theme/app_colour.dart';
+import 'package:unifye/core/widgets/app_button.dart';
 
 /// Call via:
 /// ```dart

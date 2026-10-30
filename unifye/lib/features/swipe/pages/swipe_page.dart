@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:unifye/features/auth/providers/auth_provider.dart';
 import 'package:unifye/features/swipe/providers/swipe_provider.dart';
 import 'package:unifye/features/swipe/widgets/swipe_user_card.dart';
-import 'package:unifye/widgets/app_button.dart';
-import '../core/theme/app_colour.dart';
-import '../widgets/profile_detail_sheet.dart';
+import 'package:unifye/core/theme/app_colour.dart';
+import 'package:unifye/core/widgets/app_button.dart';
+import 'package:unifye/features/swipe/widgets/profile_detail_sheet.dart';
 
 class SwipePage extends ConsumerStatefulWidget {
   const SwipePage({super.key});

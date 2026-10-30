@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:unifye/core/theme/app_colour.dart';
-import 'package:unifye/widgets/app_button.dart';
-import 'package:unifye/widgets/app_text_field.dart';
-import 'package:unifye/actions/login_actions.dart';
-import 'package:unifye/features/auth/providers/auth_provider.dart';
+import 'package:unifye/core/widgets/app_button.dart';
+import 'package:unifye/core/widgets/app_text_field.dart';
 import 'package:unifye/features/auth/models/auth_state.dart';
-import 'forgot_password_page.dart';
-import 'register-page.dart';
+import 'package:unifye/features/auth/pages/forgot_password_page.dart';
+import 'package:unifye/features/auth/pages/register_page.dart';
+import 'package:unifye/features/auth/providers/auth_provider.dart';
+import 'package:unifye/features/auth/providers/login_actions.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({Key? key}) : super(key: key);

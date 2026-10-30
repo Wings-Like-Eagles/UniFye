@@ -4,8 +4,6 @@ import 'package:http/http.dart' as http;
 
 import 'package:unifye/main.dart' show baseUrl;
 
-import '../../../pages/event_page.dart';
-import '../../../pages/message_page.dart';
 import '../../messages/models/chat_model.dart';
 import '../models/event_detail.dart';
 import '../models/event_summary_model.dart';

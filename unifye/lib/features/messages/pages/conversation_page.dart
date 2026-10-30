@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:unifye/core/theme/app_colour.dart';
 
-import 'message_page.dart';
+import 'package:unifye/features/messages/pages/message_page.dart';
 
 // ─────────────────────────────────────────────────────────────
 // Model

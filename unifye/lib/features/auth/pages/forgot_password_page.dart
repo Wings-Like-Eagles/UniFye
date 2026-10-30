@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:unifye/core/theme/app_colour.dart';
-import 'package:unifye/widgets/app_button.dart';
-import 'package:unifye/widgets/app_text_field.dart';
+import 'package:unifye/core/widgets/app_button.dart';
+import 'package:unifye/core/widgets/app_text_field.dart';
 
 class ForgotPasswordPage extends ConsumerStatefulWidget {
   const ForgotPasswordPage({Key? key}) : super(key: key);

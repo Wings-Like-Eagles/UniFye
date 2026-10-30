@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:unifye/features/auth/providers/auth_provider.dart';
-import 'package:unifye/pages/login-page.dart';
-import 'package:unifye/pages/layout_page.dart';
+import 'package:unifye/core/shell/layout_page.dart';
+import 'package:unifye/features/auth/pages/login_page.dart';
 
 /// App Router - handles navigation based on authentication state
 class AppRouter extends ConsumerWidget {

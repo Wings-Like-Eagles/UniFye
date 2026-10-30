@@ -3,8 +3,8 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:unifye/core/theme/app_colour.dart';
 
-import '../features/messages/models/chat_model.dart';
-import '../features/messages/providers/message_provider.dart';
+import 'package:unifye/features/messages/models/chat_model.dart';
+import 'package:unifye/features/messages/providers/message_provider.dart';
 
 // ─────────────────────────────────────────────────────────────
 // Page
