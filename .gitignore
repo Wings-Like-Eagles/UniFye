@@ -1,0 +1,38 @@
+# =========================================
+# IDE & editor
+# =========================================
+.vs/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# =========================================
+# .NET build output
+# =========================================
+[Bb]in/
+[Oo]bj/
+[Bb]in_temp/
+
+# =========================================
+# Local uploads & generated user content
+# =========================================
+**/wwwroot/uploads/
+
+# =========================================
+# Secrets & machine-local configuration
+# =========================================
+**/.env
+**/.env.*
+!**/.env.example
+**/appsettings.Development.json
+**/appsettings.Local.json
+**/secrets.json
+
+# =========================================
+# OS & logs
+# =========================================
+.DS_Store
+Thumbs.db
+*.log

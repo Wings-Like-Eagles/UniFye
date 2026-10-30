@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as path;
 import 'package:unifye/features/auth/models/user.dart';
+import 'package:unifye/features/auth/services/auth_token_storage.dart';
 import 'package:unifye/main.dart';
 import 'package:http_parser/http_parser.dart'; // Add this import
 
@@ -17,6 +18,10 @@ class AuthResult {
 
 /// Auth Service - handles authentication API calls
 class AuthService {
+  AuthService({AuthTokenStorage? tokenStorage})
+      : _tokenStorage = tokenStorage ?? AuthTokenStorage();
+
+  final AuthTokenStorage _tokenStorage;
   /// Login with email and password
   Future<AuthResult> login({
     required String email,
@@ -40,15 +45,19 @@ class AuthService {
         final Map<String, dynamic> userData;
         String token = '';
 
-        if (responseData is Map<String, dynamic> && responseData['success'] == true) {
-          final data = responseData['data'] as Map<String, dynamic>? ?? <String, dynamic>{};
-          userData = data['user'] as Map<String, dynamic>? ?? <String, dynamic>{};
-          token = (data['token'] ?? '').toString();
-        } else if (responseData is Map<String, dynamic>) {
-          // Support plain user response shape from backend.
-          userData = responseData;
-        } else {
-          throw Exception('Invalid login response');
+        if (responseData is! Map<String, dynamic> ||
+            responseData['success'] != true) {
+          throw Exception(
+            _extractErrorMessage(responseData, 'Invalid login response'),
+          );
+        }
+
+        final data = responseData['data'] as Map<String, dynamic>? ?? {};
+        userData = data['user'] as Map<String, dynamic>? ?? {};
+        token = (data['token'] ?? data['Token'] ?? '').toString().trim();
+
+        if (token.isEmpty) {
+          throw Exception('Login succeeded but the server did not return a token.');
         }
 
         final fullName = '${userData['firstName'] ?? ''} ${userData['lastName'] ?? ''}'.trim();
@@ -63,8 +72,11 @@ class AuthService {
               userData['avatar']?.toString(),
         );
 
-        // Store token (you can use shared_preferences or secure_storage)
-        await _storeToken(token);
+        if (user.id.isEmpty) {
+          throw Exception('Login response did not include a user id.');
+        }
+
+        await _tokenStorage.saveSession(token: token, userId: user.id);
 
         return AuthResult(user: user, token: token);
       } else {
@@ -166,10 +178,6 @@ class AuthService {
         // Registration endpoint currently returns user profile, not JWT.
         const token = '';
 
-        if (token.isNotEmpty) {
-          await _storeToken(token);
-        }
-
         return AuthResult(user: user, token: token);
       } else {
         throw Exception(
@@ -188,17 +196,13 @@ class AuthService {
   }
 
   /// Get stored authentication token
-  Future<String?> getStoredToken() async {
-    // TODO: Implement token storage using shared_preferences or secure_storage
-    // For now, return null
-    return null;
-  }
+  Future<String?> getStoredToken() => _tokenStorage.getToken();
 
-  /// Get current user with token
+  /// Validates token by loading the current user's profile (requires auth).
   Future<User> getCurrentUser(String token) async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/api/auth/me'),
+        Uri.parse('$baseUrl/api/profile'),
         headers: {
           'Authorization': 'Bearer $token',
           'Content-Type': 'application/json',
@@ -206,51 +210,31 @@ class AuthService {
       );
 
       final responseData = _tryDecodeJson(response.body);
-      
-      if (response.statusCode == 200 && responseData['success'] == true) {
-        final data = responseData['data'];
-        final userData = data['user'];
+
+      if (response.statusCode == 200 && responseData is Map<String, dynamic>) {
+        final userData = responseData;
+        final fullName =
+            '${userData['firstName'] ?? ''} ${userData['lastName'] ?? ''}'.trim();
         return User(
-          id: userData['id'] ?? userData['_id']?.toString() ?? '',
-          email: userData['email'] ?? '',
-          name: userData['name'] ?? '',
-          photoUrl: userData['photoUrl'] ?? userData['avatar'],
+          id: userData['id'].toString(),
+          email: (userData['email'] ?? '').toString(),
+          name: fullName.isEmpty ? 'User' : fullName,
+          photoUrl: userData['imageUrl']?.toString(),
         );
       } else {
-        throw Exception(_extractErrorMessage(responseData, 'Failed to get user'));
+        throw Exception(
+          _extractErrorMessage(responseData, 'Failed to restore session'),
+        );
       }
     } catch (e) {
+      if (e is Exception) rethrow;
       throw Exception('Network error: ${e.toString()}');
     }
   }
 
   /// Logout - clear stored token
   Future<void> logout() async {
-    // TODO: Implement token removal
-    // Also call logout endpoint if needed
-    try {
-      final token = await getStoredToken();
-      if (token != null) {
-        await http.post(
-          Uri.parse('$baseUrl/api/auth/logout'),
-          headers: {
-            'Authorization': 'Bearer $token',
-            'Content-Type': 'application/json',
-          },
-        );
-      }
-    } catch (e) {
-      // Ignore logout errors
-    }
-    // Clear token storage
-  }
-
-  /// Store authentication token
-  Future<void> _storeToken(String token) async {
-    // TODO: Implement token storage using shared_preferences or secure_storage
-    // Example with shared_preferences:
-    // final prefs = await SharedPreferences.getInstance();
-    // await prefs.setString('auth_token', token);
+    await _tokenStorage.clear();
   }
 
   dynamic _tryDecodeJson(String body) {

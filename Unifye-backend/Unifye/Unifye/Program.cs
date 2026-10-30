@@ -1,4 +1,5 @@
 
+using Amazon.S3;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -7,6 +8,7 @@ using Unifye.Data;
 using Unifye.Data.Seeders;
 using Unifye.Repositories;
 using Unifye.Services;
+using Unifye.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -21,6 +23,16 @@ builder.Services.AddDbContext<ApplicationDbContext>(options =>
 // ─── Repositories ─────────────────────────────────────────────────────────────
 builder.Services.AddScoped<ISubscriptionRepository, SubscriptionRepository>();
 builder.Services.AddScoped<IEventRepository, EventRepository>();
+
+// Bind config
+builder.Services.Configure<AwsS3Options>(
+builder.Configuration.GetSection(AwsS3Options.Section));
+
+// Register S3 client (picks up AWS credentials from environment/IAM role)
+builder.Services.AddAWSService<IAmazonS3>();
+
+// Register the service
+builder.Services.AddScoped<IProfileImageService, ProfileImageService>();
 
 // ─── Services ─────────────────────────────────────────────────────────────────
 builder.Services.AddScoped<IAuthService, AuthService>();

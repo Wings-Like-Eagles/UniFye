@@ -33,22 +33,22 @@ class EventSummary {
 
   factory EventSummary.fromJson(Map<String, dynamic> json) {
     return EventSummary(
-      id: json['id'] as String,
-      title: json['title'] as String,
+      id: json['id'].toString(),
+      title: (json['title'] ?? '').toString(),
       description: json['description'] as String?,
-      startsAtUtc: DateTime.parse(json['startsAt'] as String),   // was 'startsAtUtc'
-      endsAtUtc:   json['endsAt'] != null
-          ? DateTime.parse(json['endsAt'] as String) // was 'endsAtUtc'
+      startsAtUtc: DateTime.parse(json['startsAt'] as String),
+      endsAtUtc: json['endsAt'] != null
+          ? DateTime.parse(json['endsAt'] as String)
           : null,
       locationName: json['locationName'] as String?,
       locationAddress: json['locationAddress'] as String?,
-      attendeeCount: json['attendeeCount'] as int,
-      maxAttendees: json['maxAttendees'] as int?,
-      organiserId: json['organiserId'] as String,
-      organiserName: json['organiserName'] as String,
+      attendeeCount: (json['attendeeCount'] as num?)?.toInt() ?? 0,
+      maxAttendees: (json['maxAttendees'] as num?)?.toInt(),
+      organiserId: json['organiserId'].toString(),
+      organiserName: (json['organiserName'] ?? '').toString(),
       organiserImageUrl: json['organiserImageUrl'] as String?,
-      isAttending: json['isAttending'] as bool,
-      posterUrl: json['posterUrl'] as String,
+      isAttending: json['isAttending'] as bool? ?? false,
+      posterUrl: (json['posterUrl'] as String?) ?? '',
     );
   }
 

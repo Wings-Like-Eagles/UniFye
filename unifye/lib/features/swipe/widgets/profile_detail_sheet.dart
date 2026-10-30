@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:unifye/features/swipe/models/swipe_candidate.dart';
 import 'package:unifye/core/theme/app_colour.dart';
 import 'package:unifye/core/widgets/app_button.dart';
+import 'package:unifye/features/swipe/models/swipe_candidate.dart';
 
+/// Displays full profile details for a [SwipeCandidate] in a bottom sheet.
+///
 /// Call via:
 /// ```dart
 /// showModalBottomSheet(
@@ -54,11 +56,11 @@ class ProfileDetailSheet extends StatelessWidget {
       builder: (context, scrollController) {
         return Container(
           decoration: const BoxDecoration(
-            color: Colors.white,
+            color: AppColors.surface,
             borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
             boxShadow: [
               BoxShadow(
-                color: Colors.black26,
+                color: AppColors.shadowDark,
                 blurRadius: 24,
                 offset: Offset(0, -4),
               ),
@@ -74,7 +76,7 @@ class ProfileDetailSheet extends StatelessWidget {
                     width: 44,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
+                      color: AppColors.border,
                       borderRadius: BorderRadius.circular(2),
                     ),
                   ),
@@ -103,7 +105,7 @@ class ProfileDetailSheet extends StatelessWidget {
                       style: const TextStyle(
                         fontSize: 28,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF1A1A2E),
+                        color: AppColors.textPrimary,
                         letterSpacing: -0.4,
                         height: 1.1,
                       ),
@@ -269,7 +271,7 @@ class _ProfileHeroImage extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFFFF8FAB), AppColors.primary, Color(0xFFB03A6F)],
+          colors: [AppColors.secondary, AppColors.primary, AppColors.primaryDark],
           stops: [0.0, 0.5, 1.0],
         ),
       ),
@@ -279,7 +281,7 @@ class _ProfileHeroImage extends StatelessWidget {
           style: const TextStyle(
             fontSize: 72,
             fontWeight: FontWeight.bold,
-            color: Colors.white,
+            color: AppColors.textOnPrimary,
           ),
         ),
       ),
@@ -309,7 +311,7 @@ class _SectionLabel extends StatelessWidget {
           style: const TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w700,
-            color: Color(0xFF1A1A2E),
+            color: AppColors.textPrimary,
             letterSpacing: 0.2,
           ),
         ),
@@ -340,9 +342,9 @@ class _InfoRow extends StatelessWidget {
           const SizedBox(width: 10),
           Text(
             label,
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 15,
-              color: Colors.grey.shade700,
+              color: AppColors.textSecondary,
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -361,7 +363,7 @@ class _InterestChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
       decoration: BoxDecoration(
-        color: AppColors.primary.withValues(alpha: 0.08),
+        color: AppColors.surfaceVariant,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: AppColors.primary.withValues(alpha: 0.28),

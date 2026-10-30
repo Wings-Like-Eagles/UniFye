@@ -12,10 +12,12 @@ public class EventDetailResponse
     public double? LocationLatitude { get; set; }
     public double? LocationLongitude { get; set; }
     public List<EventAttendeeResponse> Attendees { get; set; } = new();
+    public int AttendeeCount { get; set; }
     public int? MaxAttendees { get; set; }
     public Guid OrganiserId { get; set; }
     public string OrganiserName { get; set; } = string.Empty;
     public string? OrganiserImageUrl { get; set; }
     public bool IsAttending { get; set; }
     public DateTime CreatedAt { get; set; }
+    public string PosterUrl { get; set; }
 }

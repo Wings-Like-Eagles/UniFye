@@ -11,5 +11,6 @@
         public string? LocationAddress { get; set; }
         public double? LocationLatitude { get; set; }
         public double? LocationLongitude { get; set; }
+        public string? PosterUrl { get; set; }
     }
 }

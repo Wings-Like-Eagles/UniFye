@@ -1,6 +1,6 @@
 namespace Unifye.Services;
 
-public class AuthServiceResult<T>
+public class AuthServiceResult<T> : IServiceResult
 {
     public bool Success { get; init; }
 

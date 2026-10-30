@@ -87,6 +87,9 @@ namespace Unifye.Migrations
                     b.Property<Guid>("OrganiserId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("PosterUrl")
+                        .HasColumnType("text");
+
                     b.Property<DateTime>("StartsAtUtc")
                         .HasColumnType("timestamp with time zone");
 
@@ -109,21 +112,18 @@ namespace Unifye.Migrations
                     b.Property<Guid>("EventId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
                     b.Property<bool>("IsOrganiser")
                         .HasColumnType("boolean");
 
                     b.Property<DateTime>("JoinedAt")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("EventId");
+                    b.HasKey("EventId", "UserId");
 
                     b.HasIndex("UserId");
-
-                    b.HasIndex("EventId", "UserId")
-                        .IsUnique();
 
                     b.ToTable("event_attendees", "development");
                 });

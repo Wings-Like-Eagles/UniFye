@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:unifye/core/theme/app_colour.dart';
 import 'package:unifye/core/widgets/app_button.dart';
+import 'package:unifye/features/auth/extensions/auth_state_extensions.dart';
 import 'package:unifye/features/auth/providers/auth_provider.dart';
 import 'package:unifye/features/event/models/event_summary_model.dart';
 import 'package:unifye/features/event/providers/event_chat_provider.dart';
@@ -9,6 +10,41 @@ import 'package:unifye/features/event/providers/event_provider.dart';
 import 'package:unifye/features/event/providers/event_request.dart';
 import 'package:unifye/features/messages/models/chat_model.dart';
 import 'package:unifye/main.dart' show baseUrl;
+
+// =============================================================================
+// Helpers
+// =============================================================================
+
+EventSummary? _eventFromList(WidgetRef ref, String eventId) {
+  return ref.watch(eventsProvider).maybeWhen(
+        data: (events) {
+          for (final event in events) {
+            if (event.id == eventId) return event;
+          }
+          return null;
+        },
+        orElse: () => null,
+      );
+}
+
+String? _currentUserId(WidgetRef ref) {
+  return ref.read(authProvider).maybeWhen(
+        authenticated: (user, _) => user.id,
+        orElse: () => null,
+      );
+}
+
+bool _isEventOrganiser(WidgetRef ref, EventSummary event) {
+  final userId = _currentUserId(ref);
+  if (userId == null) return false;
+  return userId.toLowerCase() == event.organiserId.toLowerCase();
+}
+
+void _showEventSnackBar(BuildContext context, String message) {
+  ScaffoldMessenger.of(context).showSnackBar(
+    SnackBar(content: Text(message)),
+  );
+}
 
 // =============================================================================
 // Events Page
@@ -22,14 +58,6 @@ class EventsPage extends ConsumerStatefulWidget {
 }
 
 class _EventsPageState extends ConsumerState<EventsPage> {
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(eventsProvider.notifier).fetchEvents();
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     final eventsAsync = ref.watch(eventsProvider);
@@ -45,7 +73,7 @@ class _EventsPageState extends ConsumerState<EventsPage> {
                 padding: EdgeInsets.only(top: 80),
                 child: Center(child: CircularProgressIndicator(color: AppColors.primary)),
               ),
-              error: (e, _) => _buildError(),
+              error: (e, _) => _buildError(e.toString()),
               data: (events) => events.isEmpty ? _buildEmpty() : _buildEventList(context, events),
             ),
           ),
@@ -215,7 +243,7 @@ class _EventsPageState extends ConsumerState<EventsPage> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Date badge
-                      _buildDateBadge(event.startsAtUtc),
+                      _buildDateBadge(event.startsAtUtc.toLocal()),
                       const SizedBox(width: 14),
                       Expanded(
                         child: Column(
@@ -262,7 +290,7 @@ class _EventsPageState extends ConsumerState<EventsPage> {
                                     size: 12, color: AppColors.textSecondary),
                                 const SizedBox(width: 4),
                                 Text(
-                                  _formatTime(event.startsAtUtc),
+                                  _formatTime(event.startsAtUtc.toLocal()),
                                   style: const TextStyle(
                                     fontSize: 12,
                                     color: AppColors.textSecondary,
@@ -336,15 +364,19 @@ class _EventsPageState extends ConsumerState<EventsPage> {
                         ),
                       Consumer(
                         builder: (context, ref, _) {
+                          final isOrganiser = _isEventOrganiser(ref, event);
                           return AppButton(
-                            onPressed: isFull && !event.isAttending
+                            onPressed: (isFull && !event.isAttending) ||
+                                    (event.isAttending && isOrganiser)
                                 ? null
-                                : () => _handleJoinLeave(ref, event),
-                            text: isFull && !event.isAttending
-                                ? 'Full'
-                                : event.isAttending
-                                ? 'Leave'
-                                : 'Join',
+                                : () => _handleJoinLeave(context, ref, event),
+                            text: isOrganiser && event.isAttending
+                                ? 'Hosting'
+                                : isFull && !event.isAttending
+                                    ? 'Full'
+                                    : event.isAttending
+                                        ? 'Leave'
+                                        : 'Join',
                             type: event.isAttending
                                 ? AppButtonType.outline
                                 : AppButtonType.primary,
@@ -433,12 +465,29 @@ class _EventsPageState extends ConsumerState<EventsPage> {
     );
   }
 
-  Future<void> _handleJoinLeave(WidgetRef ref, EventSummary event) async {
+  Future<void> _handleJoinLeave(
+    BuildContext context,
+    WidgetRef ref,
+    EventSummary event,
+  ) async {
+    if (event.isAttending && _isEventOrganiser(ref, event)) {
+      _showEventSnackBar(
+        context,
+        'As the organiser, delete the event instead of leaving.',
+      );
+      return;
+    }
+
     final notifier = ref.read(eventsProvider.notifier);
-    if (event.isAttending) {
-      await notifier.leaveEvent(event.id);
-    } else {
-      await notifier.joinEvent(event.id);
+    final error = event.isAttending
+        ? await notifier.leaveEvent(event.id)
+        : await notifier.joinEvent(event.id);
+
+    if (!context.mounted) return;
+    if (error != null) {
+      _showEventSnackBar(context, error);
+    } else if (event.isAttending) {
+      _showEventSnackBar(context, 'You left the event.');
     }
   }
 
@@ -491,15 +540,20 @@ class _EventsPageState extends ConsumerState<EventsPage> {
     );
   }
 
-  Widget _buildError() {
+  Widget _buildError([String? message]) {
     return Padding(
-      padding: const EdgeInsets.only(top: 80),
+      padding: const EdgeInsets.only(top: 80, left: 24, right: 24),
       child: Column(
         children: [
           const Icon(Icons.wifi_off_rounded, color: AppColors.textTertiary, size: 40),
           const SizedBox(height: 12),
-          const Text('Could not load events',
-              style: TextStyle(color: AppColors.textSecondary)),
+          Text(
+            message != null && message.isNotEmpty
+                ? message
+                : 'Could not load events',
+            textAlign: TextAlign.center,
+            style: const TextStyle(color: AppColors.textSecondary),
+          ),
           const SizedBox(height: 16),
           AppButton(
             onPressed: () => ref.read(eventsProvider.notifier).fetchEvents(),
@@ -621,7 +675,12 @@ class _CreateEventSheetState extends ConsumerState<_CreateEventSheet> {
   }
 
   Future<void> _submit() async {
-    if (_titleCtrl.text.trim().isEmpty) return;
+    if (_titleCtrl.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please enter an event title.')),
+      );
+      return;
+    }
     if (_selectedDate == null || _selectedTime == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please pick a date and time.')),
@@ -629,13 +688,41 @@ class _CreateEventSheetState extends ConsumerState<_CreateEventSheet> {
       return;
     }
 
-    final startsAt = DateTime(
+    final localStart = DateTime(
       _selectedDate!.year,
       _selectedDate!.month,
       _selectedDate!.day,
       _selectedTime!.hour,
       _selectedTime!.minute,
-    ).toUtc();
+    );
+    if (!localStart.isAfter(DateTime.now())) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Event must start in the future.')),
+      );
+      return;
+    }
+
+    int? maxAttendees;
+    final maxText = _maxCtrl.text.trim();
+    if (maxText.isNotEmpty) {
+      maxAttendees = int.tryParse(maxText);
+      if (maxAttendees == null || maxAttendees < 2) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Max attendees must be at least 2, or leave blank for unlimited.'),
+          ),
+        );
+        return;
+      }
+    }
+
+    final token = ref.read(authProvider).token;
+    if (token == null || token.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('You must be logged in to create an event.')),
+      );
+      return;
+    }
 
     setState(() => _loading = true);
 
@@ -643,10 +730,10 @@ class _CreateEventSheetState extends ConsumerState<_CreateEventSheet> {
       CreateEventRequest(
         title: _titleCtrl.text.trim(),
         description: _descCtrl.text.trim().isEmpty ? null : _descCtrl.text.trim(),
-        startsAtUtc: startsAt,
+        startsAtUtc: localStart.toUtc(),
         locationName: _locationNameCtrl.text.trim().isEmpty ? null : _locationNameCtrl.text.trim(),
         locationAddress: _locationAddressCtrl.text.trim().isEmpty ? null : _locationAddressCtrl.text.trim(),
-        maxAttendees: _maxCtrl.text.trim().isEmpty ? null : int.tryParse(_maxCtrl.text.trim()),
+        maxAttendees: maxAttendees,
         posterUrl: '',
       ),
     );
@@ -655,9 +742,14 @@ class _CreateEventSheetState extends ConsumerState<_CreateEventSheet> {
 
     if (error == null && mounted) {
       Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Event created successfully.')),
+      );
     } else if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Failed to create event. Please try again.')),
+        SnackBar(
+          content: Text(error ?? 'Failed to create event. Please try again.'),
+        ),
       );
     }
   }
@@ -896,12 +988,16 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
     super.dispose();
   }
 
+  EventSummary get _event =>
+      _eventFromList(ref, widget.event.id) ?? widget.event;
+
   @override
   Widget build(BuildContext context) {
+    final event = _event;
     return Scaffold(
       backgroundColor: AppColors.background,
       body: NestedScrollView(
-        headerSliverBuilder: (_, __) => [_buildSliverAppBar()],
+        headerSliverBuilder: (_, __) => [_buildSliverAppBar(event)],
         body: Column(
           children: [
             _buildTabBar(),
@@ -909,8 +1005,8 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
               child: TabBarView(
                 controller: _tabController,
                 children: [
-                  _buildDetailsTab(),
-                  widget.event.isAttending
+                  _buildDetailsTab(event),
+                  event.isAttending
                       ? _buildChatTab()
                       : _buildChatLockedState(),
                 ],
@@ -922,7 +1018,7 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
     );
   }
 
-  SliverAppBar _buildSliverAppBar() {
+  SliverAppBar _buildSliverAppBar(EventSummary event) {
     return SliverAppBar(
       expandedHeight: 220,
       pinned: true,
@@ -960,7 +1056,7 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          _formatEventDate(widget.event.startsAtUtc),
+                          _formatEventDate(event.startsAtUtc.toLocal()),
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 12,
@@ -969,7 +1065,7 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
                         ),
                       ),
                       const SizedBox(width: 8),
-                      if (widget.event.isAttending)
+                      if (event.isAttending)
                         Container(
                           padding: const EdgeInsets.symmetric(
                               horizontal: 10, vertical: 5),
@@ -994,7 +1090,7 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
                   ),
                   const SizedBox(height: 10),
                   Text(
-                    widget.event.title,
+                    event.title,
                     style: const TextStyle(
                       fontSize: 26,
                       fontWeight: FontWeight.w800,
@@ -1004,7 +1100,7 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'by ${widget.event.organiserName}',
+                    'by ${event.organiserName}',
                     style: const TextStyle(
                         color: Colors.white70, fontSize: 13),
                   ),
@@ -1037,8 +1133,7 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
 
   // ─── Details Tab ───────────────────────────────────────────────────────────
 
-  Widget _buildDetailsTab() {
-    final ev = widget.event;
+  Widget _buildDetailsTab(EventSummary ev) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -1048,9 +1143,9 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
           _buildInfoCard(
             icon: Icons.access_time_rounded,
             title: 'Date & Time',
-            content: _formatEventDate(ev.startsAtUtc),
+            content: _formatEventDate(ev.startsAtUtc.toLocal()),
             subtitle: ev.endsAtUtc != null
-                ? 'Ends at ${_formatTime(ev.endsAtUtc!)}'
+                ? 'Ends at ${_formatTime(ev.endsAtUtc!.toLocal())}'
                 : null,
           ),
           if (ev.locationName != null || ev.locationAddress != null)
@@ -1094,17 +1189,28 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
           const SizedBox(height: 24),
           Consumer(
             builder: (ctx, ref, _) {
-              final isFull = ev.maxAttendees != null &&
-                  ev.attendeeCount >= ev.maxAttendees!;
+              final live = _eventFromList(ref, ev.id) ?? ev;
+              final isOrganiser = _isEventOrganiser(ref, live);
+              final isFull = live.maxAttendees != null &&
+                  live.attendeeCount >= live.maxAttendees!;
               return AppButton(
-                onPressed: isFull && !ev.isAttending
+                onPressed: (isFull && !live.isAttending) ||
+                        (live.isAttending && isOrganiser)
                     ? null
-                    : () => _handleJoinLeave(ref),
-                text: ev.isAttending ? 'Leave Event' : isFull ? 'Event Full' : 'Join Event',
-                type: ev.isAttending ? AppButtonType.outline : AppButtonType.primary,
+                    : () => _handleJoinLeave(ctx, ref, live),
+                text: isOrganiser && live.isAttending
+                    ? 'You are hosting'
+                    : live.isAttending
+                        ? 'Leave Event'
+                        : isFull
+                            ? 'Event Full'
+                            : 'Join Event',
+                type: live.isAttending
+                    ? AppButtonType.outline
+                    : AppButtonType.primary,
                 isFullWidth: true,
                 size: AppButtonSize.large,
-                icon: ev.isAttending
+                icon: live.isAttending && !isOrganiser
                     ? Icons.logout_rounded
                     : Icons.celebration_rounded,
               );
@@ -1181,17 +1287,39 @@ class _EventDetailPageState extends ConsumerState<EventDetailPage>
     );
   }
 
-  Future<void> _handleJoinLeave(WidgetRef ref) async {
-    final notifier = ref.read(eventsProvider.notifier);
-    if (widget.event.isAttending) {
-      await notifier.leaveEvent(widget.event.id);
-    } else {
-      final joinError = await notifier.joinEvent(widget.event.id);
-      if (joinError == null && mounted) {
-        ref.read(eventChatProvider(widget.event.id).notifier).fetchMessages();
-      }
+  Future<void> _handleJoinLeave(
+    BuildContext context,
+    WidgetRef ref,
+    EventSummary event,
+  ) async {
+    if (event.isAttending && _isEventOrganiser(ref, event)) {
+      _showEventSnackBar(
+        context,
+        'As the organiser, delete the event instead of leaving.',
+      );
+      return;
     }
-    if (mounted) Navigator.of(context).pop();
+
+    final notifier = ref.read(eventsProvider.notifier);
+    if (event.isAttending) {
+      final error = await notifier.leaveEvent(event.id);
+      if (!context.mounted) return;
+      if (error != null) {
+        _showEventSnackBar(context, error);
+        return;
+      }
+      _showEventSnackBar(context, 'You left the event.');
+      Navigator.of(context).pop();
+    } else {
+      final joinError = await notifier.joinEvent(event.id);
+      if (!context.mounted) return;
+      if (joinError != null) {
+        _showEventSnackBar(context, joinError);
+        return;
+      }
+      ref.read(eventChatProvider(event.id).notifier).fetchMessages();
+      _showEventSnackBar(context, 'You joined the event.');
+    }
   }
 
   // ─── Chat Tab ──────────────────────────────────────────────────────────────

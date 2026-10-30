@@ -5,4 +5,9 @@ extension AuthStateX on AuthState {
         authenticated: (_, token) => token,
         orElse: () => null,
       );
+
+  bool get hasValidSession {
+    final t = token;
+    return t != null && t.trim().isNotEmpty;
+  }
 }

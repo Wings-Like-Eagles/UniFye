@@ -18,13 +18,13 @@ public class AuthController(
             return StatusCode(result.StatusCode, new { message = result.ErrorMessage });
         }
 
-        var user = result.Data!;
+        var (user, token) = result.Data!;
         return Ok(new LoginResponseDto
         {
             Success = true,
             Data = new LoginResponseDataDto
             {
-                Token = string.Empty,
+                Token = token,
                 User = new LoginUserDto
                 {
                     Id = user.Id,

@@ -217,13 +217,7 @@ public class ApplicationDbContext(DbContextOptions<ApplicationDbContext> options
         {
             entity.ToTable("event_attendees");
 
-            entity.HasKey(a => a.EventId);
-
-            entity.HasIndex(a => new
-            {
-                a.EventId,
-                a.UserId
-            }).IsUnique();
+            entity.HasKey(a => new { a.EventId, a.UserId });
 
             entity.HasOne(a => a.Event)
                 .WithMany(e => e.Attendees)

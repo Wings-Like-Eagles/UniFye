@@ -59,10 +59,19 @@ class EventRepository {
       final response = await http.get(uri, headers: _headers);
 
       if (response.statusCode == 200) {
-        final List<dynamic> json = jsonDecode(response.body);
-        final events = json
-            .map((e) => EventSummary.fromJson(e as Map<String, dynamic>))
-            .toList();
+        final decoded = jsonDecode(response.body);
+        if (decoded is! List) {
+          return EventResult.failure('Invalid events response from server.');
+        }
+        final events = <EventSummary>[];
+        for (final item in decoded) {
+          if (item is! Map<String, dynamic>) continue;
+          try {
+            events.add(EventSummary.fromJson(item));
+          } catch (e) {
+            return EventResult.failure('Could not read event data: $e');
+          }
+        }
         return EventResult.success(events);
       }
 
@@ -104,10 +113,27 @@ class EventRepository {
       );
 
       if (response.statusCode == 201) {
-        final detail = EventDetail.fromJson(
-          jsonDecode(response.body) as Map<String, dynamic>,
-        );
-        return EventResult.success(detail, 201);
+        try {
+          final detail = EventDetail.fromJson(
+            jsonDecode(response.body) as Map<String, dynamic>,
+          );
+          return EventResult.success(detail, 201);
+        } catch (_) {
+          // Creation succeeded even if the response body shape changes.
+          return EventResult.success(
+            EventDetail(
+              id: '',
+              title: request.title,
+              startsAtUtc: request.startsAtUtc,
+              attendeeCount: 1,
+              organiserId: '',
+              organiserName: '',
+              isAttending: true,
+              attendees: const [],
+            ),
+            201,
+          );
+        }
       }
 
       return EventResult.failure(_parseError(response), response.statusCode);

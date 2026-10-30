@@ -14,6 +14,7 @@ public class Event
     public double? LocationLatitude { get; set; }
     public double? LocationLongitude { get; set; }
     public DateTime CreatedAtUtc { get; set; }
+    public string? PosterUrl { get; set; }
 
     // Navigation
     public User Organiser { get; set; } = null!;

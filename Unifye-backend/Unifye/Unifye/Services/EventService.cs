@@ -54,9 +54,9 @@ public class EventService(
             return AuthServiceResult<EventDetailResponse>.Fail(
                 StatusCodes.Status400BadRequest, "Event must start in the future.");
 
-        if (request.MaxAttendees is < 2)
+        if (request.MaxAttendees is int max && max < 2)
             return AuthServiceResult<EventDetailResponse>.Fail(
-                StatusCodes.Status400BadRequest, "Event must allow at least 2 attendees.");
+                StatusCodes.Status400BadRequest, "Max attendees must be at least 2, or leave blank for unlimited.");
 
         var ev = new Event
         {
@@ -174,7 +174,7 @@ public class EventService(
     public async Task<AuthServiceResult<EventDetailResponse>> UploadPosterAsync(
         Guid id, Guid currentUserId, IFormFile poster, CancellationToken ct)
     {
-        // 1. Load event
+        // 1. Load event, ev is named event
         var ev = await eventRepo.GetByIdAsync(id, ct);
         if (ev is null)
             return AuthServiceResult<EventDetailResponse>.Fail(
@@ -369,7 +369,7 @@ public class EventService(
         OrganiserImageUrl = ev.Organiser?.Profile?.ImageUrl,
         IsAttending = ev.Attendees.Any(a => a.UserId == currentUserId),
         CreatedAt = ev.CreatedAtUtc,
-        PosterUrl = ev.PosterUrl,          // ← was missing before
+        PosterUrl = ev.PosterUrl ?? string.Empty,
     };
 
     private static EventDetailResponse ToDetailResponse(Event ev, Guid currentUserId) => new()
@@ -384,12 +384,13 @@ public class EventService(
         LocationLatitude = ev.LocationLatitude,
         LocationLongitude = ev.LocationLongitude,
         MaxAttendees = ev.MaxAttendees,
+        AttendeeCount = ev.Attendees.Count,
         OrganiserId = ev.OrganiserId,
         OrganiserName = FullName(ev.Organiser),
         OrganiserImageUrl = ev.Organiser?.Profile?.ImageUrl,
         IsAttending = ev.Attendees.Any(a => a.UserId == currentUserId),
         CreatedAt = ev.CreatedAtUtc,
-        PosterUrl = ev.PosterUrl,          // ← was missing before
+        PosterUrl = ev.PosterUrl ?? string.Empty,
         Attendees = ev.Attendees.Select(a => new EventAttendeeResponse
         {
             UserId = a.UserId,

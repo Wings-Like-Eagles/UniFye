@@ -1,7 +1,7 @@
-﻿using System.Security.Claims;
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Unifye.DTOs;
+using Unifye.Extensions;
 using Unifye.Services;
 
 namespace Unifye.Controllers
@@ -75,10 +75,6 @@ namespace Unifye.Controllers
         }
 
         // ─── Private helpers ──────────────────────────────────────────────────
-        private Guid? GetUserId()
-        {
-            var claim = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            return Guid.TryParse(claim, out var id) ? id : null;
-        }
+        private Guid? GetUserId() => User.GetUserId();
     }
 }

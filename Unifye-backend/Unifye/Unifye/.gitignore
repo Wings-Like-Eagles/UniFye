@@ -1,1 +1,9 @@
+# See repo root .gitignore for shared rules; listed again so this project folder stays safe if used alone.
 .vs/
+[Bb]in/
+[Oo]bj/
+[Bb]in_temp/
+*.user
+wwwroot/uploads/
+appsettings.Development.json
+appsettings.Local.json

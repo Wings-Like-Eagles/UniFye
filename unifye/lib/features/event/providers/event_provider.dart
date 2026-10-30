@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:unifye/features/auth/extensions/auth_state_extensions.dart';
+import 'package:unifye/features/auth/models/auth_state.dart';
 import 'package:unifye/features/auth/providers/auth_provider.dart';
 import 'package:unifye/features/event/models/event_summary_model.dart';
 
@@ -27,7 +28,20 @@ StateNotifierProvider<EventsNotifier, AsyncValue<List<EventSummary>>>(
 
 class EventsNotifier extends StateNotifier<AsyncValue<List<EventSummary>>> {
   EventsNotifier(this._ref) : super(const AsyncValue.loading()) {
-    fetchEvents();
+    _ref.listen<AuthState>(authProvider, (previous, next) {
+      final prevToken = previous?.token;
+      final nextToken = next.token;
+
+      if (next.hasValidSession &&
+          (previous == null ||
+              !previous.hasValidSession ||
+              prevToken != nextToken)) {
+        fetchEvents();
+      }
+      if (!next.hasValidSession && previous?.hasValidSession == true) {
+        state = const AsyncValue.data([]);
+      }
+    }, fireImmediately: true);
   }
 
   final Ref _ref;
@@ -35,6 +49,14 @@ class EventsNotifier extends StateNotifier<AsyncValue<List<EventSummary>>> {
   EventRepository get _repo => _ref.read(eventRepositoryProvider);
 
   Future<void> fetchEvents({int page = 1, int pageSize = 20}) async {
+    if (!_ref.read(authProvider).hasValidSession) {
+      state = AsyncValue.error(
+        'You must be logged in to view events.',
+        StackTrace.current,
+      );
+      return;
+    }
+
     state = const AsyncValue.loading();
     final result = await _repo.getEvents(page: page, pageSize: pageSize);
     if (result.isSuccess) {

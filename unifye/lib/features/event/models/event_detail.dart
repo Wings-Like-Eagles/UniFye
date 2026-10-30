@@ -11,8 +11,8 @@ class EventAttendee {
 
   factory EventAttendee.fromJson(Map<String, dynamic> json) {
     return EventAttendee(
-      id: json['id'] as String,
-      name: json['name'] as String,
+      id: (json['userId'] ?? json['id'] ?? '').toString(),
+      name: (json['name'] ?? '').toString(),
       imageUrl: json['imageUrl'] as String?,
     );
   }
@@ -52,25 +52,27 @@ class EventDetail {
   });
 
   factory EventDetail.fromJson(Map<String, dynamic> json) {
+    final attendees = (json['attendees'] as List<dynamic>? ?? [])
+        .map((a) => EventAttendee.fromJson(a as Map<String, dynamic>))
+        .toList();
+
     return EventDetail(
-      id: json['id'] as String,
+      id: json['id'].toString(),
       title: json['title'] as String,
       description: json['description'] as String?,
-      startsAtUtc: DateTime.parse(json['startsAt'] as String),   // was 'startsAtUtc'
-      endsAtUtc:   json['endsAt'] != null
-          ? DateTime.parse(json['endsAt'] as String) // was 'endsAtUtc'
+      startsAtUtc: DateTime.parse(json['startsAt'] as String),
+      endsAtUtc: json['endsAt'] != null
+          ? DateTime.parse(json['endsAt'] as String)
           : null,
       locationName: json['locationName'] as String?,
       locationAddress: json['locationAddress'] as String?,
-      attendeeCount: json['attendeeCount'] as int,
+      attendeeCount: json['attendeeCount'] as int? ?? attendees.length,
       maxAttendees: json['maxAttendees'] as int?,
-      organiserId: json['organiserId'] as String,
-      organiserName: json['organiserName'] as String,
+      organiserId: json['organiserId'].toString(),
+      organiserName: (json['organiserName'] ?? '').toString(),
       organiserImageUrl: json['organiserImageUrl'] as String?,
-      isAttending: json['isAttending'] as bool,
-      attendees: (json['attendees'] as List<dynamic>? ?? [])
-          .map((a) => EventAttendee.fromJson(a as Map<String, dynamic>))
-          .toList(),
+      isAttending: json['isAttending'] as bool? ?? false,
+      attendees: attendees,
     );
   }
 

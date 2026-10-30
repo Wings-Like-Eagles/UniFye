@@ -17,12 +17,14 @@ class ChatMessage {
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) {
     return ChatMessage(
-      id: json['id'] as String,
-      senderId: json['senderId'] as String,
-      senderName: json['senderName'] as String,
+      id: json['id'].toString(),
+      senderId: json['senderId'].toString(),
+      senderName: (json['senderName'] ?? '').toString(),
       senderImageUrl: json['senderImageUrl'] as String?,
       content: json['content'] as String,
-      sentAtUtc: DateTime.parse(json['sentAtUtc'] as String),
+      sentAtUtc: DateTime.parse(
+        (json['sentAt'] ?? json['sentAtUtc']) as String,
+      ),
     );
   }
 }

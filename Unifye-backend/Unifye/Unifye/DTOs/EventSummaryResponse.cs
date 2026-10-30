@@ -18,4 +18,5 @@ public class EventSummaryResponse
     public string? OrganiserImageUrl { get; set; }
     public bool IsAttending { get; set; }
     public DateTime CreatedAt { get; set; }
+    public string? PosterUrl { get; set; }
 }

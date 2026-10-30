@@ -1,8 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
 using Unifye.DTOs;
+using Unifye.Extensions;
 using Unifye.Services;
 
 namespace Unifye.Controllers;
@@ -49,7 +49,6 @@ public class EventController(IEventService eventService) : ControllerBase
     {
         var result = await eventService.CreateEventAsync(CurrentUserId, request, cancellationToken);
         if (!result.Success) return ToError((IServiceResult)result);
-
         return CreatedAtAction(nameof(GetEvent), new { id = result.Data!.Id }, result.Data);
     }
 
@@ -77,6 +76,35 @@ public class EventController(IEventService eventService) : ControllerBase
     {
         var result = await eventService.DeleteEventAsync(id, CurrentUserId, cancellationToken);
         return result.Success ? NoContent() : ToError((IServiceResult)result);
+    }
+
+    // -------------------------------------------------------------------------
+    // Poster image upload
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// POST /api/event/{id}/poster — Upload or replace the event poster image.
+    /// Organiser only. Accepts multipart/form-data with a single "poster" file field.
+    /// Returns the updated EventDetailResponse (including the new PosterUrl).
+    /// </summary>
+    [HttpPost("{id:guid}/poster")]
+    [Consumes("multipart/form-data")]
+    [ProducesResponseType(typeof(EventDetailResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType(StatusCodes.Status403Forbidden)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> UploadPoster(
+        Guid id,
+        IFormFile poster,                           // bound from the multipart field named "poster"
+        CancellationToken cancellationToken)
+    {
+        if (poster is null || poster.Length == 0)
+            return BadRequest(new { message = "No file provided." });
+
+        var result = await eventService.UploadPosterAsync(
+            id, CurrentUserId, poster, cancellationToken);
+
+        return result.Success ? Ok(result.Data) : ToError((IServiceResult)result);
     }
 
     // -------------------------------------------------------------------------
@@ -127,7 +155,6 @@ public class EventController(IEventService eventService) : ControllerBase
     {
         var result = await eventService.GetChatMessagesAsync(
             id, CurrentUserId, page, pageSize, cancellationToken);
-
         return result.Success ? Ok(result.Data) : ToError((IServiceResult)result);
     }
 
@@ -144,7 +171,6 @@ public class EventController(IEventService eventService) : ControllerBase
     {
         var result = await eventService.SendChatMessageAsync(
             id, CurrentUserId, request, cancellationToken);
-
         return result.Success ? Ok(result.Data) : ToError((IServiceResult)result);
     }
 
@@ -152,18 +178,10 @@ public class EventController(IEventService eventService) : ControllerBase
     // Helpers
     // -------------------------------------------------------------------------
 
-    private Guid CurrentUserId
-    {
-        get
-        {
-            var claim = User.FindFirstValue(ClaimTypes.NameIdentifier)
-                        ?? throw new InvalidOperationException("User ID claim missing.");
-            return Guid.Parse(claim);
-        }
-    }
+    private Guid CurrentUserId =>
+        User.GetUserId()
+        ?? throw new InvalidOperationException("User ID claim missing from token.");
 
-    // Non-generic — only StatusCode and ErrorMessage are needed here.
-    // Passes the message on 403 instead of swallowing it silently.
     private IActionResult ToError(IServiceResult result) =>
         result.StatusCode switch
         {
