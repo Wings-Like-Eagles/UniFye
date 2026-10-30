@@ -44,10 +44,117 @@ namespace Unifye.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("UserTwoId");
+
                     b.HasIndex("UserOneId", "UserTwoId")
                         .IsUnique();
 
                     b.ToTable("conversations", "development");
+                });
+
+            modelBuilder.Entity("Unifye.Models.Event", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(5000)
+                        .HasColumnType("character varying(5000)");
+
+                    b.Property<DateTime?>("EndsAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("LocationAddress")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<double?>("LocationLatitude")
+                        .HasColumnType("double precision");
+
+                    b.Property<double?>("LocationLongitude")
+                        .HasColumnType("double precision");
+
+                    b.Property<string>("LocationName")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("MaxAttendees")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("OrganiserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("PosterUrl")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("StartsAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OrganiserId");
+
+                    b.HasIndex("StartsAtUtc");
+
+                    b.ToTable("events", "development");
+                });
+
+            modelBuilder.Entity("Unifye.Models.EventAttendee", b =>
+                {
+                    b.Property<Guid>("EventId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<bool>("IsOrganiser")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTime>("JoinedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("EventId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("event_attendees", "development");
+                });
+
+            modelBuilder.Entity("Unifye.Models.EventChatMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<Guid>("EventId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("SenderId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("SentAtUtc")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EventId");
+
+                    b.HasIndex("SenderId");
+
+                    b.ToTable("event_chat_messages", "development");
                 });
 
             modelBuilder.Entity("Unifye.Models.Message", b =>
@@ -519,6 +626,74 @@ namespace Unifye.Migrations
                     b.ToTable("user_swipes", "development");
                 });
 
+            modelBuilder.Entity("Unifye.Models.Conversation", b =>
+                {
+                    b.HasOne("Unifye.Models.User", "UserOne")
+                        .WithMany()
+                        .HasForeignKey("UserOneId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Unifye.Models.User", "UserTwo")
+                        .WithMany()
+                        .HasForeignKey("UserTwoId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("UserOne");
+
+                    b.Navigation("UserTwo");
+                });
+
+            modelBuilder.Entity("Unifye.Models.Event", b =>
+                {
+                    b.HasOne("Unifye.Models.User", "Organiser")
+                        .WithMany()
+                        .HasForeignKey("OrganiserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Organiser");
+                });
+
+            modelBuilder.Entity("Unifye.Models.EventAttendee", b =>
+                {
+                    b.HasOne("Unifye.Models.Event", "Event")
+                        .WithMany("Attendees")
+                        .HasForeignKey("EventId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Unifye.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Event");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Unifye.Models.EventChatMessage", b =>
+                {
+                    b.HasOne("Unifye.Models.Event", "Event")
+                        .WithMany("ChatMessages")
+                        .HasForeignKey("EventId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Unifye.Models.User", "Sender")
+                        .WithMany()
+                        .HasForeignKey("SenderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Event");
+
+                    b.Navigation("Sender");
+                });
+
             modelBuilder.Entity("Unifye.Models.Message", b =>
                 {
                     b.HasOne("Unifye.Models.User", "Receiver")
@@ -591,6 +766,13 @@ namespace Unifye.Migrations
                         .IsRequired();
 
                     b.Navigation("Plan");
+                });
+
+            modelBuilder.Entity("Unifye.Models.Event", b =>
+                {
+                    b.Navigation("Attendees");
+
+                    b.Navigation("ChatMessages");
                 });
 
             modelBuilder.Entity("Unifye.Models.SubscriptionPlan", b =>

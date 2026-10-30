@@ -13,14 +13,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
   /// Check if a token exists on app startup
   Future<void> _checkInitialAuth() async {
     final token = await _authService.getStoredToken();
-    if (token != null) {
-      try {
-        state = const AuthState.loading();
-        final user = await _authService.getCurrentUser(token);
-        state = AuthState.authenticated(user: user, token: token);
-      } catch (_) {
-        state = const AuthState.unauthenticated();
-      }
+    if (token == null) return;
+
+    state = const AuthState.loading();
+    try {
+      final user = await _authService.getCurrentUser(token);
+      state = AuthState.authenticated(user: user, token: token);
+    } catch (_) {
+      await _authService.logout();
+      state = const AuthState.unauthenticated();
     }
   }
 

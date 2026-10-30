@@ -1,5 +1,9 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
 using System.Runtime.CompilerServices;
+using System.Security.Claims;
+using System.Text;
 using Unifye.Data;
 using Unifye.DTOs;
 using Unifye.Models;
@@ -9,7 +13,8 @@ namespace Unifye.Services;
 public class AuthService(
     ApplicationDbContext dbContext,
     IWebHostEnvironment environment,
-    ILogger<AuthService> logger) : IAuthService
+    ILogger<AuthService> logger, IConfiguration configuration) : IAuthService
+
 {
     private const long MaxImageSizeBytes = 5 * 1024 * 1024;
     private static readonly HashSet<string> AllowedImageTypes = new(StringComparer.OrdinalIgnoreCase)
@@ -20,7 +25,9 @@ public class AuthService(
         "image/webp"
     };
 
-    public async Task<AuthServiceResult<UserResponse>> LoginAsync(LoginRequest request, CancellationToken cancellationToken)
+    public async Task<AuthServiceResult<(UserResponse User, string Token)>> LoginAsync(
+     LoginRequest request,
+     CancellationToken cancellationToken)
     {
         var normalizedEmail = request.Email.Trim().ToLowerInvariant();
         var user = await dbContext.Users
@@ -30,16 +37,21 @@ public class AuthService(
 
         if (user is null)
         {
-            return AuthServiceResult<UserResponse>.Fail(StatusCodes.Status401Unauthorized, "Invalid email or password.");
+            return AuthServiceResult<(UserResponse User, string Token)>.Fail(StatusCodes.Status401Unauthorized,"Invalid email or password.");
         }
 
         var isValidPassword = BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash);
         if (!isValidPassword)
         {
-            return AuthServiceResult<UserResponse>.Fail(StatusCodes.Status401Unauthorized, "Invalid email or password.");
+            return AuthServiceResult<(UserResponse User, string Token)>.Fail(StatusCodes.Status401Unauthorized, "Invalid email or password.");
         }
 
-        return AuthServiceResult<UserResponse>.Ok(ToResponse(user));
+        var token = GenerateJwtToken(user);
+
+        var response = ToResponse(user);
+
+        return AuthServiceResult<(UserResponse User, string Token)>.Ok((response, token));
+      
     }
 
     public async Task<AuthServiceResult<UserResponse>> RegisterAsync(RegisterRequest request, CancellationToken cancellationToken)
@@ -123,6 +135,8 @@ public class AuthService(
         return AuthServiceResult<UserResponse>.Ok(ToResponse(user));
     }
 
+
+
     private async Task<string> SaveProfileImageAsync(IFormFile image, CancellationToken cancellationToken)
     {
         var webRootPath = environment.WebRootPath;
@@ -148,6 +162,40 @@ public class AuthService(
 
         logger.LogInformation("Saved profile image {FileName}", fileName);
         return $"/uploads/profiles/{fileName}";
+    }
+
+    private string GenerateJwtToken(User user)
+    {
+        var jwtSettings = configuration.GetSection("Jwt");
+
+        var claims = new[]
+        {
+        new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+        new Claim(ClaimTypes.Email, user.Email),
+    };
+
+        var key = new SymmetricSecurityKey(
+            Encoding.UTF8.GetBytes(jwtSettings["Secret"]!)
+        );
+
+        var creds = new SigningCredentials(
+            key,
+            SecurityAlgorithms.HmacSha256
+        );
+
+        var expires = DateTime.UtcNow.AddMinutes(
+            double.Parse(jwtSettings["ExpireMinutes"]!)
+        );
+
+        var token = new JwtSecurityToken(
+            issuer: jwtSettings["Issuer"],
+            audience: jwtSettings["Audience"],
+            claims: claims,
+            expires: expires,
+            signingCredentials: creds
+        );
+
+        return new JwtSecurityTokenHandler().WriteToken(token);
     }
 
     private static IReadOnlyCollection<string> ParseInterests(string? interests)

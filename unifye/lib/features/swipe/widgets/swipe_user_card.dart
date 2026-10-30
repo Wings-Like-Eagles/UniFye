@@ -7,69 +7,76 @@ class SwipeUserCard extends StatelessWidget {
   const SwipeUserCard({
     super.key,
     required this.candidate,
+    this.onTap,
   });
 
   final SwipeCandidate candidate;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      elevation: 8,
-      shadowColor: Colors.black38,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
-      ),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          // ── Full-bleed photo ──────────────────────────────────
-          _buildProfilePhoto(),
+    return GestureDetector(
+      onTap: onTap,
+      child:  Card(
+        clipBehavior: Clip.antiAlias,
+        elevation: 8,
+        shadowColor: Colors.black38,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // ── Full-bleed photo ──────────────────────────────────
+            _buildProfilePhoto(),
 
-          // ── Bottom gradient scrim ─────────────────────────────
-          Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  stops: const [0.45, 0.75, 1.0],
-                  colors: [
-                    Colors.transparent,
-                    Colors.black.withOpacity(0.55),
-                    Colors.black.withOpacity(0.85),
-                  ],
+            // ── Bottom gradient scrim ─────────────────────────────
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    stops: const [0.45, 0.75, 1.0],
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withOpacity(0.55),
+                      Colors.black.withOpacity(0.85),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
 
-          // ── Profile info overlay ──────────────────────────────
-          Positioned(
-            left: 20,
-            right: 20,
-            bottom: 20,
-            child: _buildInfoOverlay(context),
-          ),
+            // ── Profile info overlay ──────────────────────────────
+            Positioned(
+              left: 20,
+              right: 20,
+              bottom: 20,
+              child: _buildInfoOverlay(context),
+            ),
 
-          // ── Top gradient (subtle) for any future top badges ───
-          Positioned.fill(
-            child: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.center,
-                  colors: [
-                    Colors.black.withOpacity(0.18),
-                    Colors.transparent,
-                  ],
+            // ── Top gradient (subtle) for any future top badges ───
+            Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.center,
+                    colors: [
+                      Colors.black.withOpacity(0.18),
+                      Colors.transparent,
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
+
+
   }
 
   Widget _buildInfoOverlay(BuildContext context) {

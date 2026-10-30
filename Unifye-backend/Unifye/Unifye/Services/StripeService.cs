@@ -1,19 +1,16 @@
 ﻿using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Configuration;
 using Stripe;
 using Stripe.Checkout;
 using Unifye.Data;
-using PortalSessionService = Stripe.BillingPortal.SessionService;
-using PortalSessionCreateOptions = Stripe.BillingPortal.SessionCreateOptions;
 
 namespace Unifye.Services;
 
-internal class StripeService : IStripeService
+internal sealed class StripeService : IStripeService
 {
     private readonly ApplicationDbContext _db;
     private readonly CustomerService _customerService;
-    private readonly SessionService _sessionService;
-    private readonly PortalSessionService _portalSessionService;
+    private readonly Stripe.Checkout.SessionService _checkoutSessionService;
+    private readonly Stripe.BillingPortal.SessionService _portalSessionService; 
     private readonly string _webhookSecret;
 
     public StripeService(ApplicationDbContext db, IConfiguration configuration)
@@ -29,8 +26,8 @@ internal class StripeService : IStripeService
         StripeConfiguration.ApiKey = apiKey;
 
         _customerService = new CustomerService();
-        _sessionService = new SessionService();
-        _portalSessionService = new PortalSessionService();
+        _checkoutSessionService = new Stripe.Checkout.SessionService();
+        _portalSessionService = new Stripe.BillingPortal.SessionService(); // no "Portal" prefix
     }
 
     // ─── Customer Management ───────────────────────────────────────────────────
@@ -40,14 +37,19 @@ internal class StripeService : IStripeService
         CancellationToken ct = default)
     {
         var user = await _db.Users
+            .Include(u => u.Profile)
             .AsNoTracking()
             .FirstOrDefaultAsync(u => u.Id == userId, ct)
             ?? throw new InvalidOperationException($"User {userId} not found.");
 
+        var fullName = user.Profile is null
+            ? null
+            : $"{user.Profile.FirstName} {user.Profile.LastName}".Trim();
+
         var options = new CustomerCreateOptions
         {
             Email = user.Email,
-            Name = user.Profile?.FirstName, // ← update to your actual UserProfile name property
+            Name = fullName,
             Metadata = new Dictionary<string, string>
             {
                 ["userId"] = userId.ToString()
@@ -55,7 +57,6 @@ internal class StripeService : IStripeService
         };
 
         var customer = await _customerService.CreateAsync(options, cancellationToken: ct);
-
         return customer.Id;
     }
 
@@ -69,42 +70,44 @@ internal class StripeService : IStripeService
         int trialDays = 0,
         CancellationToken ct = default)
     {
-        var subscriptionData = new SessionSubscriptionDataOptions();
-
-        if (trialDays > 0)
-        {
-            subscriptionData.TrialSettings = new SessionSubscriptionDataTrialSettingsOptions
-            {
-                EndBehavior = new SessionSubscriptionDataTrialSettingsEndBehaviorOptions
-                {
-                    MissingPaymentMethod = "cancel"
-                }
-            };
-            subscriptionData.TrialPeriodDays = trialDays;
-        }
-
-        var options = new SessionCreateOptions
+        var options = new Stripe.Checkout.SessionCreateOptions
         {
             Customer = stripeCustomerId,
             Mode = "subscription",
             PaymentMethodTypes = ["card"],
             LineItems =
             [
-                new SessionLineItemOptions
+                new Stripe.Checkout.SessionLineItemOptions
                 {
                     Price    = priceId,
-                    Quantity = 1
+                    Quantity = 1,
                 }
             ],
-            SubscriptionData = subscriptionData,
             SuccessUrl = successUrl,
             CancelUrl = cancelUrl,
             AllowPromotionCodes = true,
         };
 
-        var session = await _sessionService.CreateAsync(options, cancellationToken: ct);
+        if (trialDays > 0)
+        {
+            options.SubscriptionData = new SessionSubscriptionDataOptions
+            {
+                TrialPeriodDays = trialDays,
+                TrialSettings = new SessionSubscriptionDataTrialSettingsOptions
+                {
+                    EndBehavior = new SessionSubscriptionDataTrialSettingsEndBehaviorOptions
+                    {
+                        MissingPaymentMethod = "cancel"
+                    }
+                },
+            };
+        }
 
-        return session.Url;
+        var session = await _checkoutSessionService.CreateAsync(options, cancellationToken: ct);
+
+        return session.Url
+            ?? throw new InvalidOperationException(
+                $"Stripe did not return a checkout URL for customer {stripeCustomerId}.");
     }
 
     // ─── Billing Portal ───────────────────────────────────────────────────────
@@ -114,20 +117,22 @@ internal class StripeService : IStripeService
         string returnUrl,
         CancellationToken ct = default)
     {
-        var options = new PortalSessionCreateOptions
+        var options = new Stripe.BillingPortal.SessionCreateOptions // no "Portal" prefix
         {
             Customer = stripeCustomerId,
-            ReturnUrl = returnUrl
+            ReturnUrl = returnUrl,
         };
 
         var session = await _portalSessionService.CreateAsync(options, cancellationToken: ct);
 
-        return session.Url;
+        return session.Url
+            ?? throw new InvalidOperationException(
+                $"Stripe did not return a portal URL for customer {stripeCustomerId}.");
     }
 
     // ─── Webhooks ─────────────────────────────────────────────────────────────
 
-    public Task<(string EventType, dynamic StripeEvent)> ParseAndValidateWebhookAsync(
+    public Task<(string EventType, Stripe.Event StripeEvent)> ParseAndValidateWebhookAsync(
         string stripeEventJson,
         string stripeSignature,
         CancellationToken ct = default)
@@ -140,7 +145,7 @@ internal class StripeService : IStripeService
                 _webhookSecret,
                 throwOnApiVersionMismatch: false);
 
-            return Task.FromResult<(string, dynamic)>((stripeEvent.Type, stripeEvent));
+            return Task.FromResult((stripeEvent.Type, stripeEvent));
         }
         catch (StripeException ex)
         {

@@ -1,25 +1,47 @@
-using System.Text;
+
+using Amazon.S3;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using System.Text;
 using Unifye.Data;
 using Unifye.Data.Seeders;
+using Unifye.Repositories;
 using Unifye.Services;
+using Unifye.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// ─── MVC / OpenAPI ────────────────────────────────────────────────────────────
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
+// ─── Database ─────────────────────────────────────────────────────────────────
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
+// ─── Repositories ─────────────────────────────────────────────────────────────
+builder.Services.AddScoped<ISubscriptionRepository, SubscriptionRepository>();
+builder.Services.AddScoped<IEventRepository, EventRepository>();
+
+// Bind config
+builder.Services.Configure<AwsS3Options>(
+builder.Configuration.GetSection(AwsS3Options.Section));
+
+// Register S3 client (picks up AWS credentials from environment/IAM role)
+builder.Services.AddAWSService<IAmazonS3>();
+
+// Register the service
+builder.Services.AddScoped<IProfileImageService, ProfileImageService>();
+
+// ─── Services ─────────────────────────────────────────────────────────────────
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ISwipeService, SwipeService>();
-builder.Services.AddScoped<ISubscriptionRepository, SubscriptionRepository>();
 builder.Services.AddScoped<IStripeService, StripeService>();
 builder.Services.AddScoped<ISubscriptionService, SubscriptionService>();
+builder.Services.AddScoped<IEventService, EventService>();
 
+// ─── CORS ─────────────────────────────────────────────────────────────────────
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
@@ -30,6 +52,9 @@ builder.Services.AddCors(options =>
             .AllowAnyMethod();
     });
 });
+
+// ─── JWT Authentication ───────────────────────────────────────────────────────
+var jwtSettings = builder.Configuration.GetSection("Jwt");
 
 builder.Services
     .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -42,18 +67,20 @@ builder.Services
             ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
-            ValidAudience = builder.Configuration["Jwt:Audience"],
+            ValidIssuer = jwtSettings["Issuer"],
+            ValidAudience = jwtSettings["Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Secret"]!)
+                Encoding.UTF8.GetBytes(jwtSettings["Secret"]!)
             ),
         };
     });
 
 builder.Services.AddAuthorization();
 
+// ─── Build ────────────────────────────────────────────────────────────────────
 var app = builder.Build();
 
+// ─── Middleware pipeline ──────────────────────────────────────────────────────
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();

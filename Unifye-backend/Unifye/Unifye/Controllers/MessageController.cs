@@ -1,6 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
+using Unifye.Extensions;
 using Unifye.Features.Messages.DTOs;
 using Unifye.Features.Messages.Services;
 
@@ -47,10 +47,7 @@ public class MessagesController : ControllerBase
         return Ok(response);
     }
 
-    private Guid GetUserId()
-    {
-        var claim = User.FindFirst(ClaimTypes.NameIdentifier);
-
-        return Guid.Parse(claim!.Value);
-    }
+    private Guid GetUserId() =>
+        User.GetUserId()
+        ?? throw new InvalidOperationException("User ID claim missing from token.");
 }

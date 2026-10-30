@@ -1,0 +1,84 @@
+class EventAttendee {
+  final String id;
+  final String name;
+  final String? imageUrl;
+
+  const EventAttendee({
+    required this.id,
+    required this.name,
+    this.imageUrl,
+  });
+
+  factory EventAttendee.fromJson(Map<String, dynamic> json) {
+    return EventAttendee(
+      id: (json['userId'] ?? json['id'] ?? '').toString(),
+      name: (json['name'] ?? '').toString(),
+      imageUrl: json['imageUrl'] as String?,
+    );
+  }
+}
+
+class EventDetail {
+  final String id;
+  final String title;
+  final String? description;
+  final DateTime startsAtUtc;
+  final DateTime? endsAtUtc;
+  final String? locationName;
+  final String? locationAddress;
+  final int attendeeCount;
+  final int? maxAttendees;
+  final String organiserId;
+  final String organiserName;
+  final String? organiserImageUrl;
+  final bool isAttending;
+  final List<EventAttendee> attendees;
+
+  const EventDetail({
+    required this.id,
+    required this.title,
+    this.description,
+    required this.startsAtUtc,
+    this.endsAtUtc,
+    this.locationName,
+    this.locationAddress,
+    required this.attendeeCount,
+    this.maxAttendees,
+    required this.organiserId,
+    required this.organiserName,
+    this.organiserImageUrl,
+    required this.isAttending,
+    required this.attendees,
+  });
+
+  factory EventDetail.fromJson(Map<String, dynamic> json) {
+    final attendees = (json['attendees'] as List<dynamic>? ?? [])
+        .map((a) => EventAttendee.fromJson(a as Map<String, dynamic>))
+        .toList();
+
+    return EventDetail(
+      id: json['id'].toString(),
+      title: json['title'] as String,
+      description: json['description'] as String?,
+      startsAtUtc: DateTime.parse(json['startsAt'] as String),
+      endsAtUtc: json['endsAt'] != null
+          ? DateTime.parse(json['endsAt'] as String)
+          : null,
+      locationName: json['locationName'] as String?,
+      locationAddress: json['locationAddress'] as String?,
+      attendeeCount: json['attendeeCount'] as int? ?? attendees.length,
+      maxAttendees: json['maxAttendees'] as int?,
+      organiserId: json['organiserId'].toString(),
+      organiserName: (json['organiserName'] ?? '').toString(),
+      organiserImageUrl: json['organiserImageUrl'] as String?,
+      isAttending: json['isAttending'] as bool? ?? false,
+      attendees: attendees,
+    );
+  }
+
+  bool get isFull =>
+      maxAttendees != null && attendeeCount >= maxAttendees!;
+
+  int? get spotsLeft =>
+      maxAttendees != null ? maxAttendees! - attendeeCount : null;
+}
